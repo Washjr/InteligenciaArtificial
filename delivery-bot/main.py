@@ -229,7 +229,8 @@ class Maze:
         self.running = True
         self.score = 0
         self.steps = 0
-        self.delay = 100  # milissegundos entre movimentos
+        # self.delay = 100  # milissegundos entre movimentos
+        self.delay = 0 # milissegundos entre movimentos zerado para simulação de Monte Carlo    
         self.path = []
         self.num_deliveries = 0  # contagem de entregas realizadas
 
@@ -289,7 +290,7 @@ class Maze:
 
             self.path = self.astar(self.world.player.position, target)
             if not self.path:
-                print("Nenhum caminho encontrado para o alvo", target)
+                #print("Nenhum caminho encontrado para o alvo", target)
                 self.running = False
                 break
 
@@ -306,7 +307,7 @@ class Maze:
                 # Recarrega a bateria se estiver no recharger
                 if self.world.recharger and pos == self.world.recharger:
                     self.world.player.battery = 60
-                    print("Bateria recarregada!")
+                    #print("Bateria recarregada!")
                 self.world.draw_world(self.path)
                 pygame.time.wait(self.delay)
 
@@ -316,21 +317,59 @@ class Maze:
                 if target in self.world.packages:
                     self.world.player.cargo += 1
                     self.world.packages.remove(target)
-                    print("Pacote coletado em", target, "Cargo agora:", self.world.player.cargo)
+                    #print("Pacote coletado em", target, "Cargo agora:", self.world.player.cargo)
                 # Se for local de entrega e o jogador tiver pelo menos um pacote, entrega.
                 elif target in self.world.goals and self.world.player.cargo > 0:
                     self.world.player.cargo -= 1
                     self.num_deliveries += 1
                     self.world.goals.remove(target)
                     self.score += 50
-                    print("Pacote entregue em", target, "Cargo agora:", self.world.player.cargo)
-            print(f"Passos: {self.steps}, Pontuação: {self.score}, Cargo: {self.world.player.cargo}, Bateria: {self.world.player.battery}, Entregas: {self.num_deliveries}")
+                    #print("Pacote entregue em", target, "Cargo agora:", self.world.player.cargo)
+            #print(f"Passos: {self.steps}, Pontuação: {self.score}, Cargo: {self.world.player.cargo}, Bateria: {self.world.player.battery}, Entregas: {self.num_deliveries}")
 
-        print("Fim de jogo!")
-        print("Pontuação final:", self.score)
-        print("Total de passos:", self.steps)
+        #print("Fim de jogo!")
+        #print("Pontuação final:", self.score)
+        #print("Total de passos:", self.steps)
         pygame.quit()
 
+        # **Retorna** o dicionário com as métricas
+        return {
+            "passos": self.steps,
+            "score": self.score,
+            "entregas": self.num_deliveries,
+            "bateria": self.world.player.battery
+        }
+
+
+def rodar_simulacao(seed):
+    maze = Maze(seed=seed)        
+    resultado = maze.game_loop()
+    resultado["seed"] = seed
+    return resultado
+
+def simulacao_monte_carlo(n_simulacoes=100):
+    resultados = []
+    for _ in range(n_simulacoes):
+        seed = random.randint(0, 100000)
+        resultado = rodar_simulacao(seed)
+        resultados.append(resultado)
+    return resultados
+
+def analisar_resultados(resultados):
+    n_simulacoes = len(resultados)
+
+    media_passos = sum(r["passos"] for r in resultados) / n_simulacoes
+    media_score    = sum(r["score"]    for r in resultados) / n_simulacoes
+    media_entregas = sum(r["entregas"] for r in resultados) / n_simulacoes
+    media_bateria  = sum(r["bateria"]  for r in resultados) / n_simulacoes
+
+    print(f"Em {n_simulacoes} simulações:")
+
+    print(f" • Média de passos: {media_passos:.2f}")
+    print(f" • Média de score:      {media_score:.2f}")
+    print(f" • Média de entregas: {media_entregas:.2f}")
+    print(f" • Média de bateria:    {media_bateria:.2f}")
+    
 # ==========================
 # PONTO DE ENTRADA PRINCIPAL
 # ==========================
@@ -346,6 +385,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     
-    maze = Maze(seed=args.seed)
-    maze.game_loop()
+    # maze = Maze(seed=args.seed)
+    # maze.game_loop()
 
+    resultados = simulacao_monte_carlo(n_simulacoes=50)
+    analisar_resultados(resultados)
