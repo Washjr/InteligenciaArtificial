@@ -3,16 +3,15 @@ import argparse
 from maze import Maze
 from search import AStarSearch
 from world import World
-from player import AdaptivePlayer, DefaultPlayer  # importe aqui os players que desejar
-
+from player import AdaptivePlayer, DefaultPlayer, RechargerPlayer  # importe aqui os players que desejar
 
 def rodar_simulacao(seed, player_class, search_strategy):
     world = World(seed=seed, render=False, player_class=player_class)
+    search_strategy = search_strategy(world)
     maze = Maze(world, render=False, search_strategy=search_strategy)
     resultado = maze.game_loop()
     resultado["seed"] = seed
     return resultado
-
 
 def simulacao_monte_carlo(n_simulacoes=100, player_class=None, search_strategy=None):
     resultados = []
@@ -21,7 +20,6 @@ def simulacao_monte_carlo(n_simulacoes=100, player_class=None, search_strategy=N
         resultado = rodar_simulacao(seed, player_class, search_strategy)
         resultados.append(resultado)
     return resultados
-
 
 def analisar_resultados(resultados):
     n_simulacoes = len(resultados)
@@ -37,7 +35,6 @@ def analisar_resultados(resultados):
     print(f" • Média de score:      {media_score:.2f}")
     print(f" • Média de entregas: {media_entregas:.2f}")
     print(f" • Média de bateria:    {media_bateria:.2f}")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -57,10 +54,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    world = World(seed=args.seed, render=True, player_class=AdaptivePlayer)
-    search_strategy = AStarSearch(world)
-    maze = Maze(world, render=True, search_strategy=search_strategy)
-    maze.game_loop()
+    # world = World(seed=args.seed, render=True, player_class=RechargerPlayer)
+    # search_strategy = AStarSearch(world)
+    # maze = Maze(world, render=True, search_strategy=search_strategy)
+    # maze.game_loop()
 
-    # resultados = simulacao_monte_carlo(n_simulacoes=1000, player_class=player_class)
-    # analisar_resultados(resultados)
+    resultados = simulacao_monte_carlo(n_simulacoes=1000, player_class=RechargerPlayer, search_strategy=AStarSearch)
+    analisar_resultados(resultados)
