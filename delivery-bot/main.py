@@ -28,6 +28,7 @@ class BasePlayer(ABC):
 
 class DefaultPlayer(BasePlayer):
     """
+    Cenário 1:
     Implementação padrão do jogador.
     Se não estiver carregando pacotes (cargo == 0), escolhe o pacote mais próximo.
     Caso contrário, escolhe a meta (entrega) mais próxima.
@@ -57,14 +58,52 @@ class DefaultPlayer(BasePlayer):
                 return best
             else:
                 return None
+            
+class AdaptivePlayer(BasePlayer):
+    """
+    Cenário 3:
+      - cargo == 0 → vai ao pacote mais próximo
+      - cargo > 0  → vai ao pacote OU à entrega mais próxima
+    """
+    def escolher_alvo(self, world):
+        sx, sy = self.position
+
+        # 1) Se não estiver carregando pacote e houver pacotes disponíveis:
+        if self.cargo == 0 and world.packages:
+            best = None
+            best_dist = float('inf')
+            for pkg in world.packages:
+                d = abs(pkg[0] - sx) + abs(pkg[1] - sy)
+                if d < best_dist:
+                    best_dist = d
+                    best = pkg
+            return best
+
+        # 2) Se já estiver com carga, considera PACOTES e ENTREGAS
+        choices = []
+        for pkg in world.packages:
+            d = abs(pkg[0] - sx) + abs(pkg[1] - sy)
+            choices.append((d, pkg))
+        for goal in world.goals:
+            d = abs(goal[0] - sx) + abs(goal[1] - sy)
+            choices.append((d, goal))
+
+        if not choices:
+            return None
+
+        # alvo (pkg ou goal) de distância mínima
+        _, best = min(choices, key=lambda item: item[0])
+        return best
 
 # ==========================
 # CLASSE WORLD (MUNDO)
 # ==========================
 class World:
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, render=True):
         if seed is not None:
             random.seed(seed)
+        self.render = render
+
         # Parâmetros do grid e janela
         self.maze_size = 30
         self.width = 600
@@ -109,26 +148,28 @@ class World:
         # Coloca o recharger (recarga de bateria) próximo ao centro (região 3x3)
         self.recharger = self.generate_recharger()
 
+        # Flag para escolher renderizar ou não pygame
+        if self.render:
         # Inicializa a janela do Pygame
-        pygame.init()
-        self.screen = pygame.display.set_mode((self.width, self.height))
-        pygame.display.set_caption("Delivery Bot")
+            pygame.init()
+            self.screen = pygame.display.set_mode((self.width, self.height))
+            pygame.display.set_caption("Delivery Bot")
 
-        # Carrega imagens para pacote, meta e recharger a partir de arquivos
-        self.package_image = pygame.image.load("images/cargo.png")
-        self.package_image = pygame.transform.scale(self.package_image, (self.block_size, self.block_size))
+            # Carrega imagens para pacote, meta e recharger a partir de arquivos
+            self.package_image = pygame.image.load("images/cargo.png")
+            self.package_image = pygame.transform.scale(self.package_image, (self.block_size, self.block_size))
 
-        self.goal_image = pygame.image.load("images/operator.png")
-        self.goal_image = pygame.transform.scale(self.goal_image, (self.block_size, self.block_size))
+            self.goal_image = pygame.image.load("images/operator.png")
+            self.goal_image = pygame.transform.scale(self.goal_image, (self.block_size, self.block_size))
 
-        self.recharger_image = pygame.image.load("images/charging-station.png")
-        self.recharger_image = pygame.transform.scale(self.recharger_image, (self.block_size, self.block_size))
+            self.recharger_image = pygame.image.load("images/charging-station.png")
+            self.recharger_image = pygame.transform.scale(self.recharger_image, (self.block_size, self.block_size))
 
-        # Cores utilizadas para desenho (caso a imagem não seja usada)
-        self.wall_color = (100, 100, 100)
-        self.ground_color = (255, 255, 255)
-        self.player_color = (0, 255, 0)
-        self.path_color = (200, 200, 0)
+            # Cores utilizadas para desenho (caso a imagem não seja usada)
+            self.wall_color = (100, 100, 100)
+            self.ground_color = (255, 255, 255)
+            self.player_color = (0, 255, 0)
+            self.path_color = (200, 200, 0)
 
     def generate_obstacles(self):
         """
@@ -171,16 +212,50 @@ class World:
             x = random.randint(0, self.maze_size - 1)
             y = random.randint(0, self.maze_size - 1)
             if self.map[y][x] == 0 and [x, y] not in self.packages and [x, y] not in self.goals:
-                return DefaultPlayer([x, y])
+                #return DefaultPlayer([x, y])
+                return AdaptivePlayer([x, y])
+
+    # def generate_recharger(self):
+    #     # Coloca o recharger próximo ao centro
+    #     center = self.maze_size // 2
+    #     while True:
+    #         x = random.randint(center - 1, center + 1)
+    #         y = random.randint(center - 1, center + 1)
+    #         if self.map[y][x] == 0 and [x, y] not in self.packages and [x, y] not in self.goals and [x, y] != self.player.position:
+    #             return [x, y]
 
     def generate_recharger(self):
-        # Coloca o recharger próximo ao centro
+        """
+        Tenta posicionar o recharger na região 3x3 central; se não houver nenhuma 
+        célula livre ali, escolhe qualquer outra célula livre do mapa.
+        """
         center = self.maze_size // 2
-        while True:
-            x = random.randint(center - 1, center + 1)
-            y = random.randint(center - 1, center + 1)
-            if self.map[y][x] == 0 and [x, y] not in self.packages and [x, y] not in self.goals and [x, y] != self.player.position:
-                return [x, y]
+        candidates = []
+        # Primeiro, coleta todas as células candidatas na região central
+        for dx in (-1, 0, +1):
+            for dy in (-1, 0, +1):
+                x, y = center + dx, center + dy
+                if (0 <= x < self.maze_size and 0 <= y < self.maze_size
+                    and self.map[y][x] == 0
+                    and [x, y] not in self.packages
+                    and [x, y] not in self.goals
+                    and [x, y] != self.player.position):
+                    candidates.append([x, y])
+
+        if candidates:
+            return random.choice(candidates)
+
+        # Se nenhuma ficou disponível no centro, varre tudo o mapa
+        for y in range(self.maze_size):
+            for x in range(self.maze_size):
+                if (self.map[y][x] == 0
+                    and [x, y] not in self.packages
+                    and [x, y] not in self.goals
+                    and [x, y] != self.player.position):
+                    return [x, y]
+
+        # Se o mapa inteiro estiver “cheio” (cenário extremo), não coloca recharger
+        return None
 
     def can_move_to(self, pos):
         x, y = pos
@@ -224,12 +299,13 @@ class World:
 # CLASSE MAZE: Lógica do jogo e planejamento de caminhos (A*)
 # ==========================
 class Maze:
-    def __init__(self, seed=None):
-        self.world = World(seed)
+    def __init__(self, seed=None, render=True):
+        self.world = World(seed, render=render)
+        self.render = render
         self.running = True
         self.score = 0
         self.steps = 0
-        # self.delay = 100  # milissegundos entre movimentos
+        #self.delay = 100  # milissegundos entre movimentos
         self.delay = 0 # milissegundos entre movimentos zerado para simulação de Monte Carlo    
         self.path = []
         self.num_deliveries = 0  # contagem de entregas realizadas
@@ -308,8 +384,11 @@ class Maze:
                 if self.world.recharger and pos == self.world.recharger:
                     self.world.player.battery = 60
                     #print("Bateria recarregada!")
-                self.world.draw_world(self.path)
-                pygame.time.wait(self.delay)
+
+                # Flag para escolher renderizar ou não pygame
+                if self.render:
+                    self.world.draw_world(self.path)
+                    pygame.time.wait(self.delay)
 
             # Ao chegar ao alvo, processa a coleta ou entrega:
             if self.world.player.position == target:
@@ -330,7 +409,10 @@ class Maze:
         #print("Fim de jogo!")
         #print("Pontuação final:", self.score)
         #print("Total de passos:", self.steps)
-        pygame.quit()
+        
+        # Flag para escolher renderizar ou não pygame
+        if self.render:
+            pygame.quit()
 
         # **Retorna** o dicionário com as métricas
         return {
@@ -341,8 +423,8 @@ class Maze:
         }
 
 
-def rodar_simulacao(seed):
-    maze = Maze(seed=seed)        
+def rodar_simulacao(seed):  
+    maze = Maze(seed=seed, render=False)   # desliga Pygame    
     resultado = maze.game_loop()
     resultado["seed"] = seed
     return resultado
@@ -385,8 +467,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     
-    # maze = Maze(seed=args.seed)
+    # maze = Maze(seed=args.seed, render=True)
     # maze.game_loop()
 
-    resultados = simulacao_monte_carlo(n_simulacoes=50)
+    resultados = simulacao_monte_carlo(n_simulacoes=1000)
     analisar_resultados(resultados)
