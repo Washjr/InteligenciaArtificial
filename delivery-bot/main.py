@@ -1,7 +1,7 @@
 import random
 import argparse
 from maze import Maze
-from search import AStarSearch
+from search import AStarSearch, DijkstraSearch, GreedySearch
 from world import World
 from player import AdaptivePlayer, DefaultPlayer, RechargerPlayer  # importe aqui os players que desejar
 
@@ -63,5 +63,5 @@ if __name__ == "__main__":
     # maze = inicializar_game(args.seed, RechargerPlayer, AStarSearch, render=True)
     # maze.game_loop()
 
-    resultados = simulacao_monte_carlo(n_simulacoes=1000, player_class=RechargerPlayer, search_strategy=AStarSearch)
+    resultados = simulacao_monte_carlo(n_simulacoes=1000, player_class=RechargerPlayer, search_strategy=DijkstraSearch)
     analisar_resultados(resultados)
