@@ -4,6 +4,7 @@ from maze import Maze
 from search import AStarSearch, DijkstraSearch, GreedySearch
 from world import World
 from player import AdaptivePlayer, DefaultPlayer, RechargerPlayer  # importe aqui os players que desejar
+import time
 
 def inicializar_game(seed, player_class, search_strategy_class, render):
     world = World(seed=seed, render=render, player_class=player_class)
@@ -12,9 +13,13 @@ def inicializar_game(seed, player_class, search_strategy_class, render):
     return maze
 
 def rodar_simulacao(seed, player_class, search_strategy_class):
+    start_sim = time.perf_counter()
     maze = inicializar_game(seed, player_class, search_strategy_class, render=False)
     resultado = maze.game_loop()
+    end_sim = time.perf_counter()
+
     resultado["seed"] = seed
+    resultado["sim_time"] = end_sim - start_sim    # tempo total em segundos
     return resultado
 
 def simulacao_monte_carlo(n_simulacoes=100, player_class=None, search_strategy=None):
@@ -33,6 +38,8 @@ def analisar_resultados(resultados):
     media_entregas = sum(r["entregas"] for r in resultados) / n_simulacoes
     media_bateria = sum(r["bateria"] for r in resultados) / n_simulacoes
     scores_negativos = sum(1 for r in resultados if r["score"] < 0)
+    media_tempo_busca = sum(r["avg_search_time"] for r in resultados) / n_simulacoes
+    media_tempo_simulacao = sum(r["sim_time"] for r in resultados) / n_simulacoes
 
     print(f"Em {n_simulacoes} simulações:")
 
@@ -41,6 +48,8 @@ def analisar_resultados(resultados):
     print(f" • Média de entregas: {media_entregas:.2f}")
     print(f" • Média de bateria:    {media_bateria:.2f}")
     print(f" • Percentual de scores negativos: {scores_negativos / n_simulacoes * 100:.2f}%")
+    print(f" • Tempo médio de busca: {media_tempo_busca*1000:.2f} ms")
+    print(f" • Tempo médio por simulação: {media_tempo_simulacao*1000:.2f} ms")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -63,5 +72,5 @@ if __name__ == "__main__":
     # maze = inicializar_game(args.seed, RechargerPlayer, AStarSearch, render=True)
     # maze.game_loop()
 
-    resultados = simulacao_monte_carlo(n_simulacoes=1000, player_class=RechargerPlayer, search_strategy=DijkstraSearch)
+    resultados = simulacao_monte_carlo(n_simulacoes=1000, player_class=RechargerPlayer, search_strategy=AStarSearch)
     analisar_resultados(resultados)

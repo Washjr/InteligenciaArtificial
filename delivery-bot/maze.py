@@ -1,4 +1,5 @@
 import pygame
+import time
 
 class Maze:
     def __init__(self, world, search_strategy, render=True):
@@ -12,6 +13,9 @@ class Maze:
         self.path = []
         self.num_deliveries = 0  # contagem de entregas realizadas
 
+        self.total_search_time = 0.0   # segundos
+        self.search_calls      = 0
+
     def game_loop(self):
         # O jogo termina quando o número de entregas realizadas é igual ao total de itens.
         while self.running:
@@ -24,7 +28,14 @@ class Maze:
             if target is None:
                 self.running = False
                 break
+
+            t0 = time.perf_counter()
             self.path = self.search_strategy.search(self.world.player.position, target)
+            t1 = time.perf_counter()
+
+            self.total_search_time += (t1 - t0)
+            self.search_calls += 1
+
             if not self.path:
                 #print("Nenhum caminho encontrado para o alvo", target)
                 self.running = False
@@ -83,5 +94,6 @@ class Maze:
             "passos": self.steps,
             "score": self.score,
             "entregas": self.num_deliveries,
-            "bateria": self.world.player.battery
+            "bateria": self.world.player.battery,
+            "avg_search_time": (self.total_search_time / self.search_calls)
         }
