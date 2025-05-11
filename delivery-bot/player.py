@@ -84,16 +84,34 @@ class DefaultPlayer(BasePlayer):
             else:
                 return None
 
+class BatchCollectorPlayer(BasePlayer):
+    def escolher_alvo(self, world):
+        sx, sy = self.position
+
+        # Etapa 1: Se há pacotes e o robô ainda pode carregar mais, continua coletando
+        if world.packages:
+            return min(world.packages, key=lambda p: self.a_star_dist((sx, sy), p, world))
+        
+        # Etapa 2: Se está cheio ou não há mais pacotes, começa a entregar
+        if world.goals:
+            return min(world.goals, key=lambda g: self.a_star_dist((sx, sy), g, world))
+        
+        # Etapa 3: Não há mais pacotes nem metas
+        return None
+
 class AdaptivePlayer(BasePlayer):
     def escolher_alvo(self, world):
         sx, sy = self.position
         targets = []
+
         if self.cargo == 0 and world.packages:
             targets = world.packages
         else:
             targets = list(world.packages) + list(world.goals)
+
         if not targets:
             return None
+        
         best = min(targets, key=lambda t: self.dist((sx, sy), t))
         return best
 
