@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import heapq
 from math import dist
 
 from arrow import get
@@ -12,6 +13,47 @@ class BasePlayer(ABC):
     def dist(self, a, b):
         # Calcula a distância de Manhattan entre dois pontos a e b
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    def a_star_dist(self, start, goal, world):
+        maze = world.map
+        size = world.maze_size
+        neighbors = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        close_set = set()
+        came_from = {}
+
+        g_score = {tuple(start): 0}
+        f_score = {tuple(start): self.dist(start, goal)}
+
+        open_set = []
+        heapq.heappush(open_set, (f_score[tuple(start)], tuple(start)))
+
+        while open_set:
+            _, current = heapq.heappop(open_set)
+            
+            if list(current) == goal:
+                return g_score[current]  # retorna apenas a distância
+
+            close_set.add(current)
+
+            for dx, dy in neighbors:
+                neighbor = (current[0] + dx, current[1] + dy)
+                tentative_g_score = g_score[current] + 1
+
+                if 0 <= neighbor[0] < size and 0 <= neighbor[1] < size:
+                    if maze[neighbor[1]][neighbor[0]] == 1:
+                        continue
+                else:
+                    continue
+                if neighbor in close_set:
+                    continue
+
+                if tentative_g_score < g_score.get(neighbor, float('inf')) or neighbor not in g_score:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = tentative_g_score + self.dist(neighbor, goal)
+                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
+        return float('inf')  # não há caminho possível
 
     @abstractmethod
     def escolher_alvo(self, world):
@@ -68,10 +110,13 @@ class RechargerPlayer(AdaptivePlayer):
         if not recharger: # guard clause para caso não tenha recharger no mapa
             return best
         
-        dist_to_target = self.dist((sx, sy), best)
-        dist_to_recharger = self.dist(best, recharger)
+        # dist_from_self_to_target = self.dist((sx, sy), best)
+        # dist_from_target_to_recharger = self.dist(best, recharger)
+        
+        dist_from_self_to_target = self.a_star_dist((sx, sy), best, world)
+        dist_from_target_to_recharger = self.a_star_dist(best, recharger, world)
 
-        if (dist_to_target + dist_to_recharger > self.battery) or (dist_to_target > self.battery):
+        if (dist_from_self_to_target + dist_from_target_to_recharger > self.battery) or (dist_from_self_to_target > self.battery):
             return recharger
 
         return best

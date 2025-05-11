@@ -1,3 +1,4 @@
+import heapq
 import pygame
 import random
 from player import AdaptivePlayer
@@ -33,6 +34,7 @@ class World:
                 self.goals.append([x, y])
         self.player = self.generate_player(player_class)
         self.recharger = self.generate_recharger()
+
         if self.render:
             pygame.init()
             self.screen = pygame.display.set_mode((self.width, self.height))
