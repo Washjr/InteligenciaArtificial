@@ -90,10 +90,12 @@ class BatchCollectorPlayer(BasePlayer):
 
         # Etapa 1: Se há pacotes e o robô ainda pode carregar mais, continua coletando
         if world.packages:
+            #return min(world.packages, key=lambda p: self.dist((sx, sy), p))
             return min(world.packages, key=lambda p: self.a_star_dist((sx, sy), p, world))
         
         # Etapa 2: Se está cheio ou não há mais pacotes, começa a entregar
         if world.goals:
+            # return min(world.goals, key=lambda g: self.dist((sx, sy), g))
             return min(world.goals, key=lambda g: self.a_star_dist((sx, sy), g, world))
         
         # Etapa 3: Não há mais pacotes nem metas
@@ -112,7 +114,8 @@ class AdaptivePlayer(BasePlayer):
         if not targets:
             return None
         
-        best = min(targets, key=lambda t: self.dist((sx, sy), t))
+        #best = min(targets, key=lambda t: self.dist((sx, sy), t))
+        best = min(targets, key=lambda t: self.a_star_dist((sx, sy), t, world))
         return best
 
 class RechargerPlayer(AdaptivePlayer):

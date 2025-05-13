@@ -16,6 +16,8 @@ class Maze:
         self.total_search_time = 0.0   # segundos
         self.search_calls      = 0
 
+        self.negative_battery_count = 0
+
     def game_loop(self):
         # O jogo termina quando o número de entregas realizadas é igual ao total de itens.
         while self.running:
@@ -45,12 +47,16 @@ class Maze:
             for pos in self.path:
                 self.world.player.position = pos
                 self.steps += 1
+
                 # Consumo da bateria: -1 por movimento se bateria >= 0, caso contrário -5
                 self.world.player.battery -= 1
+
                 if self.world.player.battery >= 0:
                     self.score -= 1
                 else:
                     self.score -= 5
+                    self.negative_battery_count += 1
+
                 # Recarrega a bateria se estiver no recharger
                 if self.world.recharger and pos == self.world.recharger:
                     self.world.player.battery = 60
@@ -95,5 +101,6 @@ class Maze:
             "score": self.score,
             "entregas": self.num_deliveries,
             "bateria": self.world.player.battery,
-            "avg_search_time": (self.total_search_time / self.search_calls)
+            "avg_search_time": (self.total_search_time / self.search_calls),
+            "negative_battery_count": self.negative_battery_count
         }

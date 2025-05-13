@@ -81,8 +81,35 @@ class World:
             if self.map[y][x] == 0 and [x, y] not in self.packages and [x, y] not in self.goals:
                 return player_class([x, y])
 
+    # def generate_recharger(self):
+    #     center = self.maze_size // 2
+    #     candidates = []
+    #     for dx in (-1, 0, +1):
+    #         for dy in (-1, 0, +1):
+    #             x, y = center + dx, center + dy
+    #             if (0 <= x < self.maze_size and 0 <= y < self.maze_size
+    #                 and self.map[y][x] == 0
+    #                 and [x, y] not in self.packages
+    #                 and [x, y] not in self.goals
+    #                 and [x, y] != self.player.position):
+    #                 candidates.append([x, y])
+    #     if candidates:
+    #         return random.choice(candidates)
+        
+    #     for y in range(self.maze_size):
+    #         for x in range(self.maze_size):
+    #             if (self.map[y][x] == 0
+    #                 and [x, y] not in self.packages
+    #                 and [x, y] not in self.goals
+    #                 and [x, y] != self.player.position):
+    #                 return [x, y]
+                
+    #     return None
+
     def generate_recharger(self):
         center = self.maze_size // 2
+
+        # 1) tenta primeiro nas 9 células centrais (r = 0 e r = 1)
         candidates = []
         for dx in (-1, 0, +1):
             for dy in (-1, 0, +1):
@@ -95,13 +122,29 @@ class World:
                     candidates.append([x, y])
         if candidates:
             return random.choice(candidates)
-        for y in range(self.maze_size):
-            for x in range(self.maze_size):
-                if (self.map[y][x] == 0
-                    and [x, y] not in self.packages
-                    and [x, y] not in self.goals
-                    and [x, y] != self.player.position):
-                    return [x, y]
+        
+        # 2) expande o “anel” de raio r = 2, 3, … até o limite do grid
+        max_radius = max(center, self.maze_size - center - 1)
+        for r in range(2, max_radius + 1):
+            ring = []
+
+            for dx in range(-r, r + 1):
+                for dy in range(-r, r + 1):
+                    # só considera as células exatamente a “raio” r (anel)
+                    if max(abs(dx), abs(dy)) != r:
+                        continue
+                    
+                    x, y = center + dx, center + dy
+                    if (0 <= x < self.maze_size and 0 <= y < self.maze_size
+                        and self.map[y][x] == 0
+                        and [x, y] not in self.packages
+                        and [x, y] not in self.goals
+                        and [x, y] != self.player.position):
+                        ring.append([x, y])
+
+            if ring:
+                return random.choice(ring)
+                
         return None
 
     def can_move_to(self, pos):
