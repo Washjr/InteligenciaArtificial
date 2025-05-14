@@ -4,6 +4,9 @@ from math import dist
 
 from arrow import get
 
+from route_optimizer import RouteOptimizer
+
+
 class BasePlayer(ABC):
     def __init__(self, position):
         self.position = position
@@ -141,4 +144,29 @@ class RechargerPlayer(AdaptivePlayer):
             return recharger
 
         return best
+    
+class OptimalPlayer(BasePlayer):
+    def __init__(self, position):
+        super().__init__(position)
+        self.route = None
+        self.fallback = None
 
+    def escolher_alvo(self, world):
+        if self.route is None:
+            optimizer = RouteOptimizer(world, self.a_star_dist)
+            self.route = optimizer.calculate_best_path(self.position)
+
+            if self.route and self.route[0] == self.position:
+                self.route = self.route[1:]
+
+            if not self.route:
+                self.fallback = RechargerPlayer(self.position)
+        
+        # Se há rota, segue-a
+        if self.route:
+            # remove e retorna o próximo nó do plano
+            # print(self.route)
+            return self.route.pop(0)
+
+        # Senão, delega ao fallback
+        return self.fallback.escolher_alvo(world)

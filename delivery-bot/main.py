@@ -3,7 +3,7 @@ import argparse
 from maze import Maze
 from search import AStarSearch, DijkstraSearch, GreedySearch
 from world import World
-from player import AdaptivePlayer, BatchCollectorPlayer, DefaultPlayer, RechargerPlayer  # importe aqui os players que desejar
+from player import AdaptivePlayer, BatchCollectorPlayer, DefaultPlayer, OptimalPlayer, RechargerPlayer  # importe aqui os players que desejar
 import time
 
 def inicializar_game(seed, player_class, search_strategy_class, render):
@@ -41,7 +41,7 @@ def analisar_resultados(resultados):
     media_tempo_simulacao = sum(r["sim_time"] for r in resultados) / n_simulacoes
     scores_negativos = sum(1 for r in resultados if r["score"] < 0)
     baterias_negativas = sum(r["negative_battery_count"] for r in resultados)    
-    negative_seeds = [r["seed"] for r in resultados if r["score"] < 0]
+    # negative_seeds = [r["seed"] for r in resultados if r["score"] < 0]
 
     print(f"Em {n_simulacoes} simulações:")
 
@@ -78,8 +78,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    maze = inicializar_game(args.seed, RechargerPlayer, AStarSearch, render=True)
-    maze.game_loop()
+    # maze = inicializar_game(args.seed, OptimalPlayer, AStarSearch, render=True)
+    # maze.game_loop()
 
-    # resultados = simulacao_monte_carlo(n_simulacoes=1000, player_class=RechargerPlayer, search_strategy=AStarSearch)
-    # analisar_resultados(resultados)
+    resultados = simulacao_monte_carlo(n_simulacoes=1000, player_class=OptimalPlayer, search_strategy=AStarSearch)
+    analisar_resultados(resultados)
