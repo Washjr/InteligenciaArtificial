@@ -4,7 +4,7 @@ from math import dist
 
 from arrow import get
 
-from route_optimizer import RouteOptimizer
+from route_optimizer import DefaultRouteOptimizer, RechargerRouteOptimizer
 
 
 class BasePlayer(ABC):
@@ -153,7 +153,8 @@ class OptimalPlayer(BasePlayer):
 
     def escolher_alvo(self, world):
         if self.route is None:
-            optimizer = RouteOptimizer(world, self.a_star_dist)
+            # optimizer = DefaultRouteOptimizer(world, self.a_star_dist)
+            optimizer = RechargerRouteOptimizer(world, self.a_star_dist)
             self.route = optimizer.calculate_best_path(self.position)
 
             if self.route and self.route[0] == self.position:
