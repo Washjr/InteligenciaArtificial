@@ -12,16 +12,16 @@ from player import (
     OptimalPlayer
 )
 
-def monte_carlo(player_cls, n=300):
+def monte_carlo(player_cls, seeds):
     """
     Executa n simulações Monte Carlo para a classe de player fornecida.
     Retorna uma lista de dicionários com os resultados.
     """
     results = []
-    for _ in range(n):
-        seed = random.randint(0, 100000)
+    for seed in seeds:        
         r = rodar_simulacao(seed, player_cls, AStarSearch)
         r["player"] = player_cls.__name__
+        r["seed"] = seed
         results.append(r)
     return results
 
@@ -74,23 +74,28 @@ def main():
         OptimalPlayer,
     ]
 
-    # 1) Executa Monte Carlo para cada player
+    # 1) Gera um conjunto fixo de seeds
+    num_simulations = 300
+    random.seed(42)  # para reprodutibilidade
+    seeds = [random.randint(0, 100_000) for _ in range(num_simulations)]
+
+    # 2) Executa Monte Carlo com as mesmas seeds para cada player
     all_results = []
     for cls in players:
         print(f"Executando Monte Carlo para {cls.__name__}...")
-        all_results.extend(monte_carlo(cls, n=300))
+        all_results.extend(monte_carlo(cls, seeds))
 
-    # 2) Cria DataFrame e sumariza
+    # 3) Cria DataFrame e sumariza
     df      = pd.DataFrame(all_results)
     summary = summarize(df).round(2)
 
-    # 3) Exibe e salva
+    # 4) Exibe e salva
     print("\n=== Resumo Comparativo ===")
     print(summary)
     summary.to_csv("player_comparison_summary.csv")
     print("\nResumo salvo em player_comparison_summary.csv")
 
-    # 4) Plota gráficos
+    # 5) Plota gráficos
     plot_summary(summary)
 
 if __name__ == "__main__":
