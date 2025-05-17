@@ -3,12 +3,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from main import rodar_simulacao
-from search import AStarSearch, DijkstraSearch, GreedySearch
+from search import (
+    GreedySearch, 
+    DijkstraSearch, 
+    AStarSearch, 
+    WeightedAStarSearch
+)
 from player import (
-    DefaultPlayer,      
-    BatchCollectorPlayer,
-    AdaptivePlayer,     
-    RechargerPlayer, 
+    DefaultPlayer,
+    DoubleBatchPlayer,     
+    FullBatchPlayer, 
+    AdaptivePlayer, 
+    ClusterAdaptivePlayer,
+    RechargerPlayer,     
     OptimalPlayer,
     OptimalRechargerPlayer
 )
@@ -17,15 +24,18 @@ SEARCH_ALGORITHMS = [
     GreedySearch,
     DijkstraSearch,
     AStarSearch,
+    WeightedAStarSearch,
 ]
 
 PLAYERS = [
-    DefaultPlayer,    
-    BatchCollectorPlayer,
+    DefaultPlayer,      
+    DoubleBatchPlayer,  
+    FullBatchPlayer,
     AdaptivePlayer,
+    ClusterAdaptivePlayer,
     RechargerPlayer,
     OptimalPlayer,
-    OptimalRechargerPlayer
+    OptimalRechargerPlayer,
 ]
 
 def monte_carlo(player_cls, search_cls, seeds):

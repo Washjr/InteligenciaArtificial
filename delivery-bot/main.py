@@ -1,9 +1,23 @@
 import random
 import argparse
 from maze import Maze
-from search import AStarSearch, DijkstraSearch, GreedySearch
 from world import World
-from player import AdaptivePlayer, BatchCollectorPlayer, DefaultPlayer, OptimalPlayer, RechargerPlayer  # importe aqui os players que desejar
+from search import (
+    GreedySearch, 
+    DijkstraSearch, 
+    AStarSearch, 
+    WeightedAStarSearch
+)
+from player import (
+    DefaultPlayer,
+    DoubleBatchPlayer,     
+    FullBatchPlayer, 
+    AdaptivePlayer,
+    ClusterAdaptivePlayer, 
+    RechargerPlayer, 
+    OptimalPlayer,
+    OptimalRechargerPlayer
+)
 import time
 
 def inicializar_game(seed, player_class, search_strategy_class, render):

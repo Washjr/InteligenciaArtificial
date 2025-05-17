@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 import heapq
 from math import dist
+import random
 
 from arrow import get
 
 from route_optimizer import DefaultRouteOptimizer, RechargerRouteOptimizer
-
 
 class BasePlayer(ABC):
     def __init__(self, position):
@@ -65,6 +65,7 @@ class BasePlayer(ABC):
 class DefaultPlayer(BasePlayer):
     def escolher_alvo(self, world):
         sx, sy = self.position
+
         if self.cargo == 0 and world.packages:
             best = None
             best_dist = float('inf')
@@ -87,23 +88,47 @@ class DefaultPlayer(BasePlayer):
             else:
                 return None
 
-class BatchCollectorPlayer(BasePlayer):
+class DoubleBatchPlayer(BasePlayer):
+    def __init__(self, position):
+        super().__init__(position)
+        self.collecting = True
+
     def escolher_alvo(self, world):
         sx, sy = self.position
 
-        # Etapa 1: Se há pacotes e o robô ainda pode carregar mais, continua coletando
-        if world.packages:
-            #return min(world.packages, key=lambda p: self.dist((sx, sy), p))
+        while True:
+            # Modo coleta
+            if self.collecting:
+                if self.cargo < 2 and world.packages:                               
+                    return min(world.packages, key=lambda p: self.a_star_dist((sx, sy), p, world))
+                else:                
+                    self.collecting = False
+                    continue  # volta para a lógica de entrega no mesmo ciclo
+
+            # Modo entrega
+            if not self.collecting:
+                if self.cargo > 0 and world.goals:                
+                    return min(world.goals, key=lambda g: self.a_star_dist((sx, sy), g, world))
+                else:                
+                    self.collecting = True
+                    continue  # volta para a lógica de coleta no mesmo ciclo
+
+            return None
+
+class FullBatchPlayer(BasePlayer):
+    def escolher_alvo(self, world):
+        sx, sy = self.position
+
+        # Se há pacotes e o robô ainda pode carregar mais, continua coletando
+        if world.packages:            
             return min(world.packages, key=lambda p: self.a_star_dist((sx, sy), p, world))
         
-        # Etapa 2: Se está cheio ou não há mais pacotes, começa a entregar
-        if world.goals:
-            # return min(world.goals, key=lambda g: self.dist((sx, sy), g))
+        # Se está cheio ou não há mais pacotes, começa a entregar
+        if world.goals:            
             return min(world.goals, key=lambda g: self.a_star_dist((sx, sy), g, world))
         
-        # Etapa 3: Não há mais pacotes nem metas
         return None
-
+    
 class AdaptivePlayer(BasePlayer):
     def escolher_alvo(self, world):
         sx, sy = self.position
@@ -117,9 +142,38 @@ class AdaptivePlayer(BasePlayer):
         if not targets:
             return None
         
-        #best = min(targets, key=lambda t: self.dist((sx, sy), t))
         best = min(targets, key=lambda t: self.a_star_dist((sx, sy), t, world))
         return best
+
+class ClusterAdaptivePlayer(BasePlayer):
+    def __init__(self, position, radius=6, weight_distance=1.0, weight_cluster=2.0):
+        super().__init__(position)        
+        self.radius = radius
+        self.weight_distance = weight_distance
+        self.weight_cluster = weight_cluster
+
+    def escolher_alvo(self, world):
+        sx, sy = self.position
+        targets = []
+
+        def cluster_score(pos, targets):
+            # Conta quantos outros alvos estão no raio usando self.dist (Manhattan)
+            return sum(1 for t in targets if self.dist(pos, t) <= self.radius and t != pos)
+
+        def cluster_heuristic(target, all_targets):
+            dist = self.a_star_dist((sx, sy), target, world)
+            cluster = cluster_score(target, all_targets)
+            return self.weight_distance * dist - self.weight_cluster * cluster  # menor valor é melhor
+
+        if self.cargo == 0 and world.packages:
+            targets = world.packages
+        else:
+            targets = list(world.packages) + list(world.goals)
+
+        if not targets:
+            return None
+
+        return min(targets, key=lambda t: cluster_heuristic(t, targets))
 
 class RechargerPlayer(AdaptivePlayer):
     def escolher_alvo(self, world):
@@ -144,7 +198,7 @@ class RechargerPlayer(AdaptivePlayer):
             return recharger
 
         return best
-    
+
 class OptimizerPlayer(BasePlayer):
     """
     Player genérico que usa um RouteOptimizer para pré-planejar toda a rota,

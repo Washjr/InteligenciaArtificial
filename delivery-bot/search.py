@@ -13,53 +13,6 @@ class BaseSearch(ABC):
     def search(self, start, goal) -> list:
         pass
     
-
-class AStarSearch(BaseSearch):    
-    def search(self, start, goal):
-        maze = self.world.map
-        size = self.world.maze_size
-        neighbors = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        close_set = set()
-        came_from = {}
-        
-        gscore = {tuple(start): 0}
-        fscore = {tuple(start): self.heuristic(start, goal)}
-
-        oheap = []
-        heapq.heappush(oheap, (fscore[tuple(start)], tuple(start)))
-
-        while oheap:
-            current = heapq.heappop(oheap)[1]
-
-            if list(current) == goal:
-                data = []
-                while current in came_from:
-                    data.append(list(current))
-                    current = came_from[current]
-                data.reverse()
-                return data
-            
-            close_set.add(current)
-
-            for dx, dy in neighbors:
-                neighbor = (current[0] + dx, current[1] + dy)
-                tentative_g = gscore[current] + 1
-
-                if 0 <= neighbor[0] < size and 0 <= neighbor[1] < size:
-                    if maze[neighbor[1]][neighbor[0]] == 1:
-                        continue
-                else:
-                    continue
-                if neighbor in close_set and tentative_g >= gscore.get(neighbor, 0):
-                    continue
-
-                if tentative_g < gscore.get(neighbor, float('inf')) or neighbor not in [i[1] for i in oheap]:
-                    came_from[neighbor] = current
-                    gscore[neighbor] = tentative_g
-                    fscore[neighbor] = tentative_g + self.heuristic(neighbor, goal)
-                    heapq.heappush(oheap, (fscore[neighbor], neighbor))
-        return []
-    
 class GreedySearch(BaseSearch):
     def search(self, start, goal):
         maze = self.world.map
@@ -157,3 +110,73 @@ class DijkstraSearch(BaseSearch):
         
         # se não achou caminho
         return []
+    
+class GenericAStarSearch(BaseSearch):
+    """
+    Retorna o caminho de start a goal usando A* com f = g + weight * h.
+    """
+    def __init__(self, world, weight: float):
+        super().__init__(world)
+        self.weight = weight
+
+    def search(self, start, goal):
+        maze = self.world.map
+        size = self.world.maze_size
+        neighbors = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        closed = set()
+        came_from = {}
+
+        gscore = {tuple(start): 0}
+        fscore = {tuple(start): self.weight * self.heuristic(start, goal)}
+
+        open_heap = []
+        heapq.heappush(open_heap, (fscore[tuple(start)], tuple(start)))
+
+        while open_heap:
+            _, current = heapq.heappop(open_heap)
+
+            if list(current) == goal:
+                path = []
+                while current in came_from:
+                    path.append(list(current))
+                    current = came_from[current]
+                path.reverse()
+                return path
+
+            closed.add(current)
+
+            for dx, dy in neighbors:
+                neighbor = (current[0] + dx, current[1] + dy)
+                tentative_g = gscore[current] + 1
+
+                if 0 <= neighbor[0] < size and 0 <= neighbor[1] < size:
+                    if maze[neighbor[1]][neighbor[0]] == 1:
+                        continue
+                else:
+                    continue
+
+                if neighbor in closed and tentative_g >= gscore.get(neighbor, float('inf')):
+                    continue
+                
+                if tentative_g < gscore.get(neighbor, float('inf')) or neighbor not in [i[1] for i in open_heap]:
+                    came_from[neighbor] = current
+                    gscore[neighbor] = tentative_g
+                    fscore[neighbor] = tentative_g + self.weight * self.heuristic(neighbor, goal)
+                    heapq.heappush(open_heap, (fscore[neighbor], neighbor))
+
+        return []
+
+class AStarSearch(GenericAStarSearch):
+    """
+    Peso = 1.0 para o A* clássico.
+    """
+    def __init__(self, world):        
+        super().__init__(world, weight=1.0)
+
+
+class WeightedAStarSearch(GenericAStarSearch):
+    """
+    Versão ponderada do A*: usa f(n) = g(n) + w * h(n), onde w é fixo em 1.5, para priorizar heurística.
+    """
+    def __init__(self, world):        
+        super().__init__(world, weight=1.5)
