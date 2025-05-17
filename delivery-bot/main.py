@@ -81,5 +81,5 @@ if __name__ == "__main__":
     maze = inicializar_game(args.seed, OptimalPlayer, AStarSearch, render=True)
     maze.game_loop()
 
-    # resultados = simulacao_monte_carlo(n_simulacoes=100, player_class=OptimalPlayer, search_strategy=AStarSearch)
+    # resultados = simulacao_monte_carlo(n_simulacoes=1000, player_class=OptimalPlayer, search_strategy=AStarSearch)
     # analisar_resultados(resultados)
