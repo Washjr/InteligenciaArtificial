@@ -101,6 +101,6 @@ class Maze:
             "score": self.score,
             "entregas": self.num_deliveries,
             "bateria": self.world.player.battery,
-            #"avg_search_time": (self.total_search_time / self.search_calls),
+            "avg_search_time": (self.total_search_time / self.search_calls),
             "negative_battery_count": self.negative_battery_count
         }

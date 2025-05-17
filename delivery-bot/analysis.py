@@ -5,25 +5,27 @@ import matplotlib.pyplot as plt
 from main import rodar_simulacao
 from search import AStarSearch, DijkstraSearch, GreedySearch
 from player import (
-    DefaultPlayer, 
-    AdaptivePlayer, 
-    BatchCollectorPlayer, 
+    DefaultPlayer,      
+    BatchCollectorPlayer,
+    AdaptivePlayer,     
     RechargerPlayer, 
-    OptimalPlayer
+    OptimalPlayer,
+    OptimalRechargerPlayer
 )
 
-SEARCH_ALGORITHMS = [
-    AStarSearch,
+SEARCH_ALGORITHMS = [    
     GreedySearch,
     DijkstraSearch,
+    AStarSearch,
 ]
 
 PLAYERS = [
-    DefaultPlayer,
-    AdaptivePlayer,
+    DefaultPlayer,    
     BatchCollectorPlayer,
+    AdaptivePlayer,
     RechargerPlayer,
     OptimalPlayer,
+    OptimalRechargerPlayer
 ]
 
 def monte_carlo(player_cls, search_cls, seeds):
@@ -58,6 +60,8 @@ def summarize(df: pd.DataFrame) -> pd.DataFrame:
             std_battery     = ("bateria", "std"),
             pct_score_neg   = ("score",   lambda s: (s < 0).mean() * 100),
             pct_batt_neg    = ("negative_battery_count", lambda s: (s > 0).mean() * 100),
+            mean_search_ms  = ("avg_search_time", lambda s: s.mean() * 1000),
+            std_search_ms   = ("avg_search_time", lambda s: s.std() * 1000),
             mean_time_ms    = ("sim_time", lambda s: s.mean() * 1000),
             std_time_ms     = ("sim_time", lambda s: s.std() * 1000),
         )
@@ -89,8 +93,9 @@ def plot_all(summary: pd.DataFrame):
     plot_metric(summary, "mean_score",       "Score Médio",                    "Pontos Médios")
     plot_metric(summary, "mean_deliveries",  "Entregas Médias",                "Entregas Médias")
     plot_metric(summary, "mean_battery",     "Bateria Média",                  "Carga Média Restante")
-    plot_metric(summary, "pct_score_neg",    "% de Scores Negativos",          "% Simulações Score < 0")
-    plot_metric(summary, "pct_batt_neg",     "% de Baterias Negativas",        "% Simulações Bateria Negativa")
+    plot_metric(summary, "pct_score_neg",    "% Scores Negativos",             "% Simulações Score < 0")
+    plot_metric(summary, "pct_batt_neg",     "% Baterias Negativas",           "% Simulações Bateria Negativa")
+    plot_metric(summary, "mean_search_ms",   "Tempo Médio por Busca (ms)",     "ms por Busca")
     plot_metric(summary, "mean_time_ms",     "Tempo Médio por Simulação (ms)", "ms por Simulação")
 
 def main():   
