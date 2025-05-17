@@ -203,6 +203,9 @@ class RechargerRouteOptimizer(BaseRouteOptimizer):
             mask, i, idx_b = prev
 
         path.reverse()
+
+        # remove a posição inicial
         if path and path[0]==start_pos:
-            path.pop(0)            
+            path.pop(0)
+
         return path

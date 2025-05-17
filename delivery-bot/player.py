@@ -145,29 +145,47 @@ class RechargerPlayer(AdaptivePlayer):
 
         return best
     
-class OptimalPlayer(BasePlayer):
-    def __init__(self, position):
+class OptimizerPlayer(BasePlayer):
+    """
+    Player genérico que usa um RouteOptimizer para pré-planejar toda a rota,
+    e um player de fallback caso não haja rota.
+    """    
+    def __init__(self, position, optimizer_cls, fallback_cls):
         super().__init__(position)
+        self.optimizer_cls = optimizer_cls
+        self.fallback_cls  = fallback_cls
         self.route = None
         self.fallback = None
 
     def escolher_alvo(self, world):
         if self.route is None:
-            # optimizer = DefaultRouteOptimizer(world, self.a_star_dist)
-            optimizer = RechargerRouteOptimizer(world, self.a_star_dist)
+            optimizer = self.optimizer_cls(world, self.a_star_dist)            
             self.route = optimizer.calculate_best_path(self.position)
 
-            if self.route and self.route[0] == self.position:
-                self.route = self.route[1:]
-
             if not self.route:
-                self.fallback = RechargerPlayer(self.position)
+                self.fallback = self.fallback_cls(self.position)
         
-        # Se há rota, segue-a
+        # Se há rota, segue-a, senão delega ao fallback
         if self.route:
-            # remove e retorna o próximo nó do plano
-            # print(self.route)
             return self.route.pop(0)
+        else:
+            return self.fallback.escolher_alvo(world)
+    
+class OptimalPlayer(OptimizerPlayer):
+    """
+    Usa DefaultRouteOptimizer para minimizar apenas o número de passos.
+    """
+    def __init__(self, position):        
+        super().__init__(position,
+                         optimizer_cls=DefaultRouteOptimizer,
+                         fallback_cls=RechargerPlayer)
 
-        # Senão, delega ao fallback
-        return self.fallback.escolher_alvo(world)
+class OptimalRechargerPlayer(OptimizerPlayer):
+    """
+    Usa RechargerRouteOptimizer para otimizar considerando
+    recarga de bateria e custo de passos com bateria negativa.
+    """
+    def __init__(self, position):        
+        super().__init__(position,
+                         optimizer_cls=RechargerRouteOptimizer,
+                         fallback_cls=RechargerPlayer)
