@@ -37,10 +37,10 @@ def analisar_resultados(resultados):
     media_score = sum(r["score"] for r in resultados) / n_simulacoes
     media_entregas = sum(r["entregas"] for r in resultados) / n_simulacoes
     media_bateria = sum(r["bateria"] for r in resultados) / n_simulacoes
-    #media_tempo_busca = sum(r["avg_search_time"] for r in resultados) / n_simulacoes
-    media_tempo_simulacao = sum(r["sim_time"] for r in resultados) / n_simulacoes
     scores_negativos = sum(1 for r in resultados if r["score"] < 0)
-    baterias_negativas = sum(r["negative_battery_count"] for r in resultados)    
+    baterias_negativas = sum(r["negative_battery_count"] for r in resultados)   
+    #media_tempo_busca = sum(r["avg_search_time"] for r in resultados) / n_simulacoes
+    media_tempo_simulacao = sum(r["sim_time"] for r in resultados) / n_simulacoes 
     negative_seeds = [r["seed"] for r in resultados if r["score"] < 0]
 
     print(f"Em {n_simulacoes} simulações:")

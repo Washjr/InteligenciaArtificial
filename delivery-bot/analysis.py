@@ -40,7 +40,8 @@ def summarize(df: pd.DataFrame) -> pd.DataFrame:
         std_battery     = ("bateria", "std"),
         pct_score_neg   = ("score",   lambda s: (s < 0).mean() * 100),
         pct_batt_neg    = ("negative_battery_count", lambda s: (s > 0).mean() * 100),
-        mean_time_s     = ("sim_time","mean"),
+        mean_time_ms    = ("sim_time", lambda s: s.mean() * 1000),
+        std_time_ms     = ("sim_time", lambda s: s.std() * 1000),
     )
     return summary
 
@@ -49,10 +50,13 @@ def plot_summary(summary: pd.DataFrame):
     Plota gráficos de barras para as principais métricas do summary.
     """
     metrics = {
-        "mean_steps":    ("Passos Médios",            "Número Médio de Passos"),
-        "mean_score":    ("Score Médio",              "Pontos Médios"),
-        "pct_score_neg": ("% de Scores Negativos",     "Percentual de Simulações com Score < 0"),
-        "pct_batt_neg":  ("% de Baterias Negativas",   "Percentual de Simulações com Bateria Negativa"),
+        "mean_steps":       ("Passos Médios",                   "Número Médio de Passos"),
+        "mean_score":       ("Score Médio",                     "Pontos Médios"),
+        "mean_deliveries":  ("Entregas Médias",                "Número Médio de Entregas"),
+        "mean_battery":     ("Bateria Média",                  "Carga Média Restante"),
+        "pct_score_neg":    ("% de Scores Negativos",           "Percentual de Simulações com Score < 0"),
+        "pct_batt_neg":     ("% de Baterias Negativas",         "Percentual de Simulações com Bateria Negativa"),
+        "mean_time_ms":     ("Tempo Médio por Simulação (ms)",  "Milissegundos Médios por Simulação"),
     }
 
     for metric, (title, ylabel) in metrics.items():
