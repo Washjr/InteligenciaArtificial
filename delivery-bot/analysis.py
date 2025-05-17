@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from main import rodar_simulacao
-from search import AStarSearch
+from search import AStarSearch, DijkstraSearch, GreedySearch
 from player import (
     DefaultPlayer, 
     AdaptivePlayer, 
@@ -12,72 +12,88 @@ from player import (
     OptimalPlayer
 )
 
-def monte_carlo(player_cls, seeds):
+SEARCH_ALGORITHMS = [
+    AStarSearch,
+    GreedySearch,
+    DijkstraSearch,
+]
+
+PLAYERS = [
+    DefaultPlayer,
+    AdaptivePlayer,
+    BatchCollectorPlayer,
+    RechargerPlayer,
+    OptimalPlayer,
+]
+
+def monte_carlo(player_cls, search_cls, seeds):
     """
-    Executa n simulações Monte Carlo para a classe de player fornecida.
+    Executa n simulações Monte Carlo para um par (player, search).
     Retorna uma lista de dicionários com os resultados.
     """
     results = []
     for seed in seeds:        
-        r = rodar_simulacao(seed, player_cls, AStarSearch)
+        r = rodar_simulacao(seed, player_cls, search_cls)
         r["player"] = player_cls.__name__
+        r["search"] = search_cls.__name__
         r["seed"] = seed
         results.append(r)
     return results
 
 def summarize(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Agrupa por 'player' e calcula estatísticas descritivas e percentuais.
+    Agrupa por (player, search) e calcula estatísticas:
+    passos, score, entregas, bateria, percentuais, tempo em ms.
     """
-    summary = df.groupby("player").agg(
-        mean_steps      = ("passos",  "mean"),
-        std_steps       = ("passos",  "std"),
-        mean_score      = ("score",   "mean"),
-        std_score       = ("score",   "std"),
-        mean_deliveries = ("entregas","mean"),
-        std_deliveries  = ("entregas","std"),
-        mean_battery    = ("bateria", "mean"),
-        std_battery     = ("bateria", "std"),
-        pct_score_neg   = ("score",   lambda s: (s < 0).mean() * 100),
-        pct_batt_neg    = ("negative_battery_count", lambda s: (s > 0).mean() * 100),
-        mean_time_ms    = ("sim_time", lambda s: s.mean() * 1000),
-        std_time_ms     = ("sim_time", lambda s: s.std() * 1000),
+    summary = (
+        df.groupby(["player","search"])
+        .agg(
+            mean_steps      = ("passos",  "mean"),
+            std_steps       = ("passos",  "std"),
+            mean_score      = ("score",   "mean"),
+            std_score       = ("score",   "std"),
+            mean_deliveries = ("entregas","mean"),
+            std_deliveries  = ("entregas","std"),
+            mean_battery    = ("bateria", "mean"),
+            std_battery     = ("bateria", "std"),
+            pct_score_neg   = ("score",   lambda s: (s < 0).mean() * 100),
+            pct_batt_neg    = ("negative_battery_count", lambda s: (s > 0).mean() * 100),
+            mean_time_ms    = ("sim_time", lambda s: s.mean() * 1000),
+            std_time_ms     = ("sim_time", lambda s: s.std() * 1000),
+        )
+        .round(2)
+        .reset_index()
     )
     return summary
 
-def plot_summary(summary: pd.DataFrame):
+def plot_metric(df: pd.DataFrame, metric: str, title: str, ylabel: str):
     """
-    Plota gráficos de barras para as principais métricas do summary.
+    Plota um barplot comparativo do metric para cada player,
+    com barras coloridas por estratégia de busca.
     """
-    metrics = {
-        "mean_steps":       ("Passos Médios",                   "Número Médio de Passos"),
-        "mean_score":       ("Score Médio",                     "Pontos Médios"),
-        "mean_deliveries":  ("Entregas Médias",                "Número Médio de Entregas"),
-        "mean_battery":     ("Bateria Média",                  "Carga Média Restante"),
-        "pct_score_neg":    ("% de Scores Negativos",           "Percentual de Simulações com Score < 0"),
-        "pct_batt_neg":     ("% de Baterias Negativas",         "Percentual de Simulações com Bateria Negativa"),
-        "mean_time_ms":     ("Tempo Médio por Simulação (ms)",  "Milissegundos Médios por Simulação"),
-    }
+    pivot = df.pivot(index="player", columns="search", values=metric)
+    pivot.plot(kind="bar", figsize=(8,4))
+    plt.title(title)
+    plt.xlabel("Player")
+    plt.ylabel(ylabel)
+    plt.xticks(rotation=45)
+    plt.legend(title="Busca")
+    plt.tight_layout()
+    plt.show()
 
-    for metric, (title, ylabel) in metrics.items():
-        plt.figure(figsize=(6,4))
-        summary[metric].plot(kind="bar")
-        plt.title(title)
-        plt.xlabel("Player")
-        plt.ylabel(ylabel)
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.show()
+def plot_all(summary: pd.DataFrame):
+    """
+    Gera um gráfico para cada métrica de interesse.
+    """
+    plot_metric(summary, "mean_steps",       "Passos Médios",                  "Passos Médios")
+    plot_metric(summary, "mean_score",       "Score Médio",                    "Pontos Médios")
+    plot_metric(summary, "mean_deliveries",  "Entregas Médias",                "Entregas Médias")
+    plot_metric(summary, "mean_battery",     "Bateria Média",                  "Carga Média Restante")
+    plot_metric(summary, "pct_score_neg",    "% de Scores Negativos",          "% Simulações Score < 0")
+    plot_metric(summary, "pct_batt_neg",     "% de Baterias Negativas",        "% Simulações Bateria Negativa")
+    plot_metric(summary, "mean_time_ms",     "Tempo Médio por Simulação (ms)", "ms por Simulação")
 
-def main():
-    players = [
-        DefaultPlayer,
-        AdaptivePlayer,
-        BatchCollectorPlayer,
-        RechargerPlayer,
-        OptimalPlayer,
-    ]
-
+def main():   
     # 1) Gera um conjunto fixo de seeds
     num_simulations = 300
     random.seed(42)  # para reprodutibilidade
@@ -85,22 +101,24 @@ def main():
 
     # 2) Executa Monte Carlo com as mesmas seeds para cada player
     all_results = []
-    for cls in players:
-        print(f"Executando Monte Carlo para {cls.__name__}...")
-        all_results.extend(monte_carlo(cls, seeds))
+    for player in PLAYERS:
+        for search in SEARCH_ALGORITHMS:
+            print(f"Executando Monte Carlo para {player.__name__} + {search.__name__}...")
+            all_results.extend(monte_carlo(player, search, seeds))
 
     # 3) Cria DataFrame e sumariza
     df      = pd.DataFrame(all_results)
-    summary = summarize(df).round(2)
+    summary = summarize(df)
 
     # 4) Exibe e salva
-    print("\n=== Resumo Comparativo ===")
+    print("\n=== Resumo Comparativo (player × busca) ===")
     print(summary)
+
     summary.to_csv("player_comparison_summary.csv")
     print("\nResumo salvo em player_comparison_summary.csv")
 
     # 5) Plota gráficos
-    plot_summary(summary)
+    plot_all(summary)
 
 if __name__ == "__main__":
     main()
