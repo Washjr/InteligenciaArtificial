@@ -20,6 +20,7 @@ from player import (
 )
 import time
 
+# render é um parâmetro que indica se o jogo deve ser renderizado ou não, util para simulações 
 def inicializar_game(seed, player_class, search_strategy_class, render):
     world = World(seed=seed, render=render, player_class=player_class)
     search_strategy = search_strategy_class(world)
