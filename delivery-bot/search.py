@@ -56,6 +56,13 @@ class GreedySearch(BaseSearch):
                     came_from[neighbor] = current
                     heapq.heappush(open_heap, (self.heuristic(neighbor, goal), neighbor))
 
+                # {
+                # (1,0): (0,0),
+                # (2,0): (1,0),
+                # (2,1): (2,0),
+                # (2,2): (2,1)
+                # }
+
         # sem caminho
         return []
     
