@@ -1,9 +1,5 @@
 from abc import ABC, abstractmethod
 import heapq
-from math import dist
-import random
-
-from arrow import get
 
 from route_optimizer import DefaultRouteOptimizer, RechargerRouteOptimizer
 
@@ -18,45 +14,49 @@ class BasePlayer(ABC):
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
     def a_star_dist(self, start, goal, world):
-        maze = world.map
-        size = world.maze_size
+        """
+        Retorna o custo mínimo (soma de cost_at) para ir de start a goal,
+        usando A* sobre world.can_move_to e world.cost_at.
+        """        
         neighbors = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        close_set = set()
-        came_from = {}
+        closed = set()
 
         g_score = {tuple(start): 0}
         f_score = {tuple(start): self.dist(start, goal)}
 
-        open_set = []
-        heapq.heappush(open_set, (f_score[tuple(start)], tuple(start)))
+        open_heap = []
+        heapq.heappush(open_heap, (f_score[tuple(start)], tuple(start)))
 
-        while open_set:
-            _, current = heapq.heappop(open_set)
+        while open_heap:
+            _, current = heapq.heappop(open_heap)
+
+            if current in closed:
+                continue
+            closed.add(current)
             
             if list(current) == goal:
                 return g_score[current]  # retorna apenas a distância
 
-            close_set.add(current)
-
+            # Expande vizinhos válidos
             for dx, dy in neighbors:
                 neighbor = (current[0] + dx, current[1] + dy)
-                tentative_g_score = g_score[current] + 1
-
-                if 0 <= neighbor[0] < size and 0 <= neighbor[1] < size:
-                    if maze[neighbor[1]][neighbor[0]] == 1:
-                        continue
-                else:
+                
+                if not world.can_move_to(neighbor):
                     continue
-                if neighbor in close_set:
+                if neighbor in closed:
                     continue
 
-                if tentative_g_score < g_score.get(neighbor, float('inf')) or neighbor not in g_score:
-                    came_from[neighbor] = current
-                    g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = tentative_g_score + self.dist(neighbor, goal)
-                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
+                # custo para mover até 'neighbor'
+                cost = world.cost_at(neighbor)
+                tentative_g = g_score[current] + cost
 
-        return float('inf')  # não há caminho possível
+                # se encontrou caminho melhor, registra e empurra no heap
+                if tentative_g < g_score.get(neighbor, float('inf')):                    
+                    g_score[neighbor] = tentative_g
+                    f_score[neighbor] = tentative_g + self.dist(neighbor, goal)
+                    heapq.heappush(open_heap, (f_score[neighbor], neighbor))
+
+        return float('inf')  # não há caminho possível  
 
     @abstractmethod
     def escolher_alvo(self, world):
@@ -146,7 +146,7 @@ class AdaptivePlayer(BasePlayer):
         return best
 
 class ClusterAdaptivePlayer(BasePlayer):
-    def __init__(self, position, radius=6, weight_distance=1.0, weight_cluster=2.0):
+    def __init__(self, position, radius=8, weight_distance=1.0, weight_cluster=1.5):
         super().__init__(position)        
         self.radius = radius
         self.weight_distance = weight_distance
@@ -157,14 +157,20 @@ class ClusterAdaptivePlayer(BasePlayer):
         targets = []
 
         def cluster_score(pos, targets):
-            # Conta quantos outros alvos estão no raio usando self.dist (Manhattan)
-            return sum(1 for t in targets if self.dist(pos, t) <= self.radius and t != pos)
+            # Conta quantos outros alvos estão dentro do 'radius' de custo A* (e não é o próprio pos)
+            return sum(
+                1
+                for t in targets
+                if t != pos and self.a_star_dist(pos, t, world) <= self.radius
+            )
 
         def cluster_heuristic(target, all_targets):
             dist = self.a_star_dist((sx, sy), target, world)
             cluster = cluster_score(target, all_targets)
-            return self.weight_distance * dist - self.weight_cluster * cluster  # menor valor é melhor
+            # quanto menor esse valor, mais atrativo
+            return self.weight_distance * dist - self.weight_cluster * cluster
 
+        # determina o conjunto de alvos conforme a carga
         if self.cargo == 0 and world.packages:
             targets = world.packages
         else:
@@ -173,19 +179,23 @@ class ClusterAdaptivePlayer(BasePlayer):
         if not targets:
             return None
 
+        # escolhe o alvo que minimiza a heurística de cluster
         return min(targets, key=lambda t: cluster_heuristic(t, targets))
 
 class RechargerPlayer(AdaptivePlayer):
     def escolher_alvo(self, world):
-        best = super().escolher_alvo(world) # pega o alvo mais próximo conforme a lógica do AdaptivePlayer
+        # pega o alvo mais próximo conforme a lógica do AdaptivePlayer
+        best = super().escolher_alvo(world) 
         
-        if best is None: # guard clause para caso não tenha alvo
+        # guard clause para caso não tenha alvo
+        if best is None: 
             return None
         
         sx, sy = self.position
         
+        # guard clause para caso não tenha recharger no mapa
         recharger = world.recharger
-        if not recharger: # guard clause para caso não tenha recharger no mapa
+        if not recharger: 
             return best
         
         # dist_from_self_to_target = self.dist((sx, sy), best)

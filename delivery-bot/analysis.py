@@ -135,5 +135,21 @@ def main():
     # 5) Plota gráficos
     plot_all(summary)
 
+    for search_name in [alg.__name__ for alg in SEARCH_ALGORITHMS]:
+        players_sorted = sorted(df["player"].unique())
+        df_search = df[df["search"] == search_name]
+        plt.figure(figsize=(12, 6))
+        plt.boxplot(
+            [df_search[df_search["player"] == player]["score"] for player in players_sorted],
+            labels=players_sorted
+        )
+        plt.title(f"Boxplot do Score por Player ({search_name})")
+        plt.xlabel("Player")
+        plt.ylabel("Score")
+        plt.xticks(rotation=45)
+        plt.grid()
+        plt.tight_layout()
+        plt.show()
+
 if __name__ == "__main__":
     main()
