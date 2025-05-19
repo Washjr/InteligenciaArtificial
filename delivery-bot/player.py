@@ -146,7 +146,7 @@ class AdaptivePlayer(BasePlayer):
         return best
 
 class ClusterAdaptivePlayer(BasePlayer):
-    def __init__(self, position, radius=8, weight_distance=1.0, weight_cluster=1.5):
+    def __init__(self, position, radius=6, weight_distance=1.0, weight_cluster=2.0):
         super().__init__(position)        
         self.radius = radius
         self.weight_distance = weight_distance
@@ -161,7 +161,7 @@ class ClusterAdaptivePlayer(BasePlayer):
             return sum(
                 1
                 for t in targets
-                if t != pos and self.a_star_dist(pos, t, world) <= self.radius
+                if t != pos and self.dist(pos, t) <= self.radius
             )
 
         def cluster_heuristic(target, all_targets):

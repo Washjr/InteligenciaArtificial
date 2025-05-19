@@ -27,14 +27,7 @@ class World:
         # Gera paredes ('X') e pisos especiais ('S') e ('W')
         self.generate_walls()
         self.generate_slippery_tiles()
-        self.generate_workshop_tiles()
-
-        # Coleta posições de paredes para desenho
-        self.walls = []
-        for row in range(self.maze_size):
-            for col in range(self.maze_size):
-                if self.map[row][col] == 'X':
-                    self.walls.append((col, row))
+        self.generate_workshop_tiles()        
 
         # Gera pacotes e destinos em células não‐paredes
         self.total_items = 4
@@ -169,47 +162,78 @@ class World:
 
     def init_pygame(self):
         """
-        Configurações iniciais do Pygame (tela, imagens, cores...).
+        Configurações iniciais do Pygame: tela, imagens e cores de terreno.
         """
         pygame.init()
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption("Delivery Bot")
+
+        # carrega imagens
         self.package_image = pygame.image.load("images/cargo.png")
         self.package_image = pygame.transform.scale(self.package_image, (self.block_size, self.block_size))
         self.goal_image = pygame.image.load("images/operator.png")
         self.goal_image = pygame.transform.scale(self.goal_image, (self.block_size, self.block_size))
         self.recharger_image = pygame.image.load("images/charging-station.png")
         self.recharger_image = pygame.transform.scale(self.recharger_image, (self.block_size, self.block_size))
-        self.wall_color = (100, 100, 100)
-        self.ground_color = (255, 255, 255)
+
+        # cores de terreno
+        self.terrain_colors = {
+            'P': (255, 255, 255),  # plain
+            'S': (150, 200, 255),  # slippery
+            'W': (255, 180, 180),  # workshop
+            'X': (100, 100, 100),  # wall
+        }
+
+        # cores para path e player
         self.player_color = (0, 255, 0)
         self.path_color = (200, 200, 0)
 
     def draw_world(self, path=None):
-        self.screen.fill(self.ground_color)
-        for (x, y) in self.walls:
-            rect = pygame.Rect(x * self.block_size, y * self.block_size, self.block_size, self.block_size)
-            pygame.draw.rect(self.screen, self.wall_color, rect)
-        for pkg in self.packages:
-            x, y = pkg
-            self.screen.blit(self.package_image, (x * self.block_size, y * self.block_size))
-        for goal in self.goals:
-            x, y = goal
-            self.screen.blit(self.goal_image, (x * self.block_size, y * self.block_size))
+        """
+        Desenha todo o mapa: terreno, pacotes, metas, recarregador, caminho e player.
+        """
+        # desenha terrenos
+        for y in range(self.maze_size):
+            for x in range(self.maze_size):
+                terrain = self.map[y][x]
+                color   = self.terrain_colors.get(terrain, (0, 0, 0))
+                rect    = pygame.Rect(
+                    x * self.block_size,
+                    y * self.block_size,
+                    self.block_size,
+                    self.block_size
+                )
+                pygame.draw.rect(self.screen, color, rect)       
+
+        # pacotes e metas
+        for px, py in self.packages:
+            self.screen.blit(self.package_image, (px * self.block_size, py * self.block_size))
+        for gx, gy in self.goals:
+            self.screen.blit(self.goal_image, (gx * self.block_size, gy * self.block_size))
+
+        # recarregador
         if self.recharger:
-            x, y = self.recharger
-            self.screen.blit(self.recharger_image, (x * self.block_size, y * self.block_size))
+            rx, ry = self.recharger
+            self.screen.blit(self.recharger_image, (rx * self.block_size, ry * self.block_size))
+
+        # caminho (quadrado menor)
         if path:
-            for pos in path:
-                x, y = pos
-                rect = pygame.Rect(x * self.block_size + self.block_size // 4,
-                                   y * self.block_size + self.block_size // 4,
-                                   self.block_size // 2, self.block_size // 2)
+            for cx, cy in path:
+                rect = pygame.Rect(
+                    cx * self.block_size + self.block_size//4,
+                    cy * self.block_size + self.block_size//4,
+                    self.block_size//2,
+                    self.block_size//2
+                )
                 pygame.draw.rect(self.screen, self.path_color, rect)
-        x, y = self.player.position
-        rect = pygame.Rect(x * self.block_size, y * self.block_size, self.block_size, self.block_size)
+
+        # robô
+        rx, ry = self.player.position
+        rect   = pygame.Rect(rx * self.block_size, ry * self.block_size,
+                             self.block_size, self.block_size)
         pygame.draw.rect(self.screen, self.player_color, rect)
-        pygame.display.flip()
+
+        pygame.display.flip() 
 
     def cost_at(self, pos):
         x, y = pos

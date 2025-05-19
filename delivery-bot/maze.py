@@ -3,24 +3,24 @@ import time
 
 class Maze:
     def __init__(self, world, search_strategy, render=True):
-        self.world = world
-        self.search_strategy = search_strategy  # Deve ser uma instância de BaseSearch
-        self.debug = render
-        self.running = True
-        self.score = 0
-        self.steps = 0
-        self.delay = 100  # milissegundos entre movimentos
-        self.path = []
-        self.num_deliveries = 0  # contagem de entregas realizadas
+        self.world                  = world
+        self.search_strategy        = search_strategy  # Deve ser uma instância de BaseSearch
+        self.running                = True
+        self.debug                  = render
+        self.delay                  = 100  # ms entre movimentos
+        self.path                   = []
 
-        self.total_search_time = 0.0   # segundos
-        self.search_calls      = 0
-
+        # métricas
+        self.score                  = 0
+        self.steps                  = 0
+        self.num_deliveries         = 0
+        self.total_search_time      = 0.0
+        self.search_calls           = 0
         self.negative_battery_count = 0
 
     def game_loop(self):
-        # O jogo termina quando o número de entregas realizadas é igual ao total de itens.
         while self.running:
+            # O jogo termina quando o número de entregas realizadas é igual ao total de itens.
             if self.num_deliveries >= self.world.total_items:
                 self.running = False
                 break
@@ -39,22 +39,27 @@ class Maze:
             self.search_calls += 1
 
             if not self.path:
-                #print("Nenhum caminho encontrado para o alvo", target)
+                if self.debug:
+                    print("Nenhum caminho encontrado para o alvo", target)
                 self.running = False
                 break
 
-            # Segue o caminho calculado
+            # Segue o caminho, descontando custo de terreno ou penalidade
             for pos in self.path:
                 self.world.player.position = pos
                 self.steps += 1
 
-                # Consumo da bateria: -1 por movimento se bateria >= 0, caso contrário -5
-                self.world.player.battery -= 1
+                # Obtém o custo do terreno e o consome na bateria
+                cost = self.world.cost_at(pos)
+                self.world.player.battery -= cost   
 
+                # Score diminuído por movimento                             
                 if self.world.player.battery >= 0:
-                    self.score -= 1
+                    # Bateria positiva: desconta o custo do terreno
+                    self.score -= cost
                 else:
-                    self.score -= 5
+                    # Bateria negativa: desconta o custo do terreno multiplicado por 3
+                    self.score -= 3 * cost
                     self.negative_battery_count += 1
 
                 # Recarrega a bateria se estiver no recharger
@@ -70,11 +75,14 @@ class Maze:
 
             # Ao chegar ao alvo, processa a coleta ou entrega:
             if self.world.player.position == target:
+
                 # Se for local de coleta, pega o pacote.
                 if target in self.world.packages:
                     self.world.player.cargo += 1
                     self.world.packages.remove(target)
-                    #print("Pacote coletado em", target, "Cargo agora:", self.world.player.cargo)
+                    if(self.debug):
+                        print("Pacote coletado em", target, "Cargo agora:", self.world.player.cargo)
+
                 # Se for local de entrega e o jogador tiver pelo menos um pacote, entrega.
                 elif target in self.world.goals and self.world.player.cargo > 0:
                     self.world.player.cargo -= 1
@@ -83,8 +91,13 @@ class Maze:
                     self.score += 50
                     if(self.debug):
                         print("Pacote entregue em", target, "Cargo agora:", self.world.player.cargo)
+
             if(self.debug):
-                print(f"Passos: {self.steps}, Pontuação: {self.score}, Cargo: {self.world.player.cargo}, Bateria: {self.world.player.battery}, Entregas: {self.num_deliveries}")
+                print(
+                    f"Passos: {self.steps}, Pontuação: {self.score}, "
+                    f"Cargo: {self.world.player.cargo}, Bateria: {self.world.player.battery}, "
+                    f"Entregas: {self.num_deliveries}"
+                )
 
         if(self.debug):
             print("Fim de jogo!")
@@ -101,6 +114,7 @@ class Maze:
             "score": self.score,
             "entregas": self.num_deliveries,
             "bateria": self.world.player.battery,
-            "avg_search_time": (self.total_search_time / self.search_calls),
+            "avg_search_time": (self.total_search_time / self.search_calls)
+                   if self.search_calls else 0.0,
             "negative_battery_count": self.negative_battery_count
         }

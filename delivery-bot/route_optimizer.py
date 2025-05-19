@@ -162,7 +162,7 @@ class RechargerRouteOptimizer(BaseRouteOptimizer):
 
                         # calcula custo                        
                         extra = max(0, d - b_real)  # passos sem bateria
-                        cost = C + (d - extra) * 1 + extra * 5
+                        cost = C + (d - extra) * 1 + extra * 3
 
                         if j == R:                         
                             # Indo para o recarregador
