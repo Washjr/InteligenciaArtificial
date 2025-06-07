@@ -1,0 +1,42 @@
+index
+Job Title
+Salary Estimate
+Job Description
+Rating
+Company Name
+Location
+Headquarters
+Size
+Founded
+Type of ownership
+Industry
+Sector
+Revenue
+Competitors
+Hourly
+Employer provided
+Lower Salary
+Upper Salary
+Avg Salary(K)
+company_txt
+Job Location
+Age
+Python
+spark
+aws
+excel
+sql
+sas
+keras
+pytorch
+scikit
+tensor
+hadoop
+tableau
+bi
+flink
+mongo
+google_an
+job_title_sim
+seniority_by_title
+Degree
