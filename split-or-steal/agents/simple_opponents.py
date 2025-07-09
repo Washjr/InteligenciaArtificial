@@ -36,27 +36,26 @@ class StaticAgent:
 
 class Splitter(StaticAgent):
   def __init__(self):
-    StaticAgent.__init__(self, "Splitter", always_split_callback)
-    
-class Randy(StaticAgent):
-  def __init__(self):
-    StaticAgent.__init__(self, "Randy", always_random_callback)    
-
-    
+    super().__init__("Splitter", always_split_callback)
+      
 class Stealer(StaticAgent):
   def __init__(self):
-    StaticAgent.__init__(self, "Stealer", always_steal_callback)    
+    super().__init__("Stealer", always_steal_callback)   
+
+class Randy(StaticAgent):
+  def __init__(self):
+    super().__init__("Randy", always_random_callback)  
 
 class Karmine(StaticAgent):
   def __init__(self):
-    StaticAgent.__init__(self, "Karmine", always_his_karma_callback)  
+    super().__init__("Karmine", always_his_karma_callback)  
     
-class Opportunist(StaticAgent):
-  def __init__(self):
-    StaticAgent.__init__(self, "Opportunist", always_steal_on_last_round_callback)    
-  
 class Pretender(StaticAgent):
   def __init__(self):
-    StaticAgent.__init__(self, "Pretender", always_karma_positive_callback)    
+    super().__init__("Pretender", always_karma_positive_callback)  
+
+class Opportunist(StaticAgent):
+  def __init__(self):
+    super().__init__("Opportunist", always_steal_on_last_round_callback)      
 
 

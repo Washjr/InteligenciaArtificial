@@ -49,7 +49,7 @@ class RLAgent:
     return "SimpleRL"
 
   def decision(self, amount, rounds_left, your_karma, his_karma):
-    print(f"{amount=}, {rounds_left=}, {your_karma=}, {his_karma=}")
+    # print(f"{amount=}, {rounds_left=}, {your_karma=}, {his_karma=}")
     self.last_round = True if rounds_left == 0 else False
     
     novel_input = (amount, rounds_left, your_karma, his_karma, self.last_round)
@@ -58,17 +58,17 @@ class RLAgent:
       
     self.current_input = novel_input
 
-    print(self.Q)
+    # print(self.Q)
     return self.choose_action(self.current_input)
 
   # Receba as acoes de cada agente e o reward obtido (vs total possivel)
   def result(self, your_action, his_action, total_possible, reward):
     if self.last_round:
-      print("Forgetting last opponent action") # Vamos mudar de agente
+      # print("Forgetting last opponent action") # Vamos mudar de agente
       self.last_opponent_action = None;
     else:   
       self.last_opponent_action = his_action;
-      print(f"For {self.get_name()=} {self.last_opponent_action=} ")   
+      # print(f"For {self.get_name()=} {self.last_opponent_action=} ")   
     
     if your_action == "steal" and his_action == "steal": 
       reward = +0
