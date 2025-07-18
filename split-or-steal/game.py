@@ -95,6 +95,8 @@ class Game:
         left_player.add_karma(1 if left_decision == "split" else -1)
         right_player.add_karma(1 if right_decision == "split" else -1)
 
+        # Retorna recompensas para uso externo
+        return left_reward, right_reward
 
 
     # Métodos de renderização

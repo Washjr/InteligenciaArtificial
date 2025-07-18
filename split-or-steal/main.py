@@ -1,4 +1,5 @@
 import argparse
+import csv
 import random
 from itertools import combinations
 from collections import defaultdict
@@ -50,6 +51,13 @@ def run_tournament(render, mode):
     game = Game(total_rounds, render=render)
     matches_played = defaultdict(lambda: 0)
 
+    # Encontre o Player que usa RLAgent
+    rl_players = [p for p in players if isinstance(p.agent, RLAgent)]
+    rl_player = rl_players[0]
+
+    # Histórico de recompensas
+    rl_rewards = []
+
     while not game.is_over():
         random.shuffle(players)
 
@@ -74,13 +82,27 @@ def run_tournament(render, mode):
 
                     game.handle_events()
                 
-                game.play_round(p1, p2, rem)
+                left_r, right_r = game.play_round(p1, p2, rem)
+
+                # Se RLAgent era o jogador da esquerda ou da direita, registre
+                if p1 is rl_player:
+                    rl_rewards.append(left_r)
+                elif p2 is rl_player:
+                    rl_rewards.append(right_r)
 
                 if render:
                     game.render_end()
                     game.draw_player_postround(p1, x=50, y=50)
                     game.draw_player_postround(p2, x=550, y=50)
                     game.update_display()
+
+    # Exporta para CSV: cada linha é (round_index, reward)
+    with open('rl_learning_curve.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['round', 'reward'])
+        for i, r in enumerate(rl_rewards, start=1):
+            writer.writerow([i, r])
+    print("Curva de aprendizado salva em rl_learning_curve.csv")
 
     # Exibir resultados finais
     print("\nFim do torneio!\n")

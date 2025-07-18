@@ -3,14 +3,12 @@ from collections import defaultdict
 import numpy as np
 
 class RLAgent:
-    def __init__(self):
+    def __init__(self, alpha: float = 0.5, gamma: float = 0.9, epsilon: float = 0.1):
     
-        # Learning rate
-        self.alpha = 0.5
-        # Discount factor
-        self.gamma = 0.9
-        # Exploration rate
-        self.epsilon = 0.1
+        # Hyperparâmetros
+        self.alpha = alpha        # Learning rate
+        self.gamma = gamma        # Discount factor
+        self.epsilon = epsilon    # Exploration rate
 
         # Lembrando a ultima acao
         self.last_opponent_action = None
