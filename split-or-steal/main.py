@@ -5,32 +5,33 @@ from collections import defaultdict
 
 from game import Game
 from player import Player
-from agents.simple_opponents import (
+from agents.static_agents import (
    Karmine,
    Opportunist,
    Pretender,
    Randy,
    Splitter,
    Stealer,
+   TitForTat
 )
-from agents.your_agent import ReinforcementLearningAgent
 from agents.rl_agent import RLAgent
+from agents.advanced_rl_agent import AdvancedRLAgent
 
 
 def create_players(mode) -> list[Player]:
     """Cria instâncias de Player de acordo com o modo escolhido."""
     if mode == 'all':
-        raw = [Splitter(), Stealer(), Randy(), Karmine(), Opportunist(), Pretender(), ReinforcementLearningAgent(), RLAgent()]
+        raw = [Splitter(), Stealer(), Randy(), Karmine(), Opportunist(), Pretender(), TitForTat(), RLAgent(), AdvancedRLAgent()]
     elif mode == 'simple':
-        raw = [Karmine(), Karmine(), RLAgent(), ReinforcementLearningAgent()]
+        raw = [Karmine(), Karmine(), RLAgent(), TitForTat()]
     elif mode == 'difficult':
-        raw = [ReinforcementLearningAgent(), ReinforcementLearningAgent(), RLAgent(), ReinforcementLearningAgent()]
+        raw = [TitForTat(), TitForTat(), RLAgent(), TitForTat()]
     elif mode == 'very_difficult':
         raw = [Pretender(), Pretender(), RLAgent(), Karmine()]
     elif mode == 'karma_aware':
         raw = [Karmine(), Karmine(), RLAgent(), Stealer()]
     elif mode == 'opportunists':
-        raw = [Opportunist(), Opportunist(), RLAgent(), ReinforcementLearningAgent()]
+        raw = [Opportunist(), Opportunist(), RLAgent(), TitForTat()]
     elif mode == 'three_karmines':
         raw = [Karmine(), Karmine(), RLAgent(), Karmine()]
     else:
@@ -39,26 +40,8 @@ def create_players(mode) -> list[Player]:
 
 
 def run_tournament(render, mode):
-    # Allgame
+    # Players
     players = create_players(mode)
-
-    # Simple
-    # players = [Player(Karmine()),  Player(Karmine()), Player(RLAgent()), Player(ReinforcementLearningAgent())]
-
-    # Difficult 
-    # players = [Player(ReinforcementLearningAgent()), Player(ReinforcementLearningAgent()), Player(RLAgent()), Player(ReinforcementLearningAgent())]
-
-    # Very difficult
-    # players = [Player(Pretender()), Player(Pretender()), Player(RLAgent()), Player(Karmine())]
-
-    # Karma-aware
-    # players = [Player(Karmine()), Player(Karmine()), Player(RLAgent()), Player(Stealer())]
-
-    # Opportunists
-    # players = [Player(Opportunist()),Player(Opportunist()), Player(RLAgent()), Player(ReinforcementLearningAgent())]
-
-    # 3 Karmines
-    # players = [Player(Karmine()),  Player(Karmine()), Player(RLAgent()), Player(Karmine())]
 
     n_rematches = 10
     n_full_rounds = 100
@@ -104,6 +87,7 @@ def run_tournament(render, mode):
 
     for p in players:
         print(f"Agente '{p.name}' obteve {p.total_amount:.2f}")
+
     winner = max(players, key=lambda p: p.total_amount)
     print(f"\nVencedor: {winner.name} com {winner.total_amount:.2f}")
 
