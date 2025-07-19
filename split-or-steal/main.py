@@ -30,14 +30,14 @@ def create_players(mode, rl_params=None) -> list[Player]:
     
     mapping = {
         'all':       [Splitter, Stealer, Randy, Karmine, Opportunist, Pretender, TitForTat, Pavlov, ThresholdAgent, make_rl, AdvancedRLAgent],
-        'simple':    [Karmine, Karmine, make_rl, TitForTat],
-        'difficult': [TitForTat, TitForTat, make_rl, TitForTat],
-        'very_difficult': [Pretender, Pretender, make_rl, Karmine],
-        'karma_aware':    [Karmine, Karmine, make_rl, Stealer],
-        'opportunists':   [Opportunist, Opportunist, make_rl, TitForTat],
-        'three_karmines': [Karmine, Karmine, make_rl, Karmine],
-        'pavlov_vs_tft':  [Pavlov, TitForTat, make_rl, Karmine],
-        'threshold_mix':  [lambda: ThresholdAgent(25.0), lambda: ThresholdAgent(50.0), lambda: ThresholdAgent(75.0), make_rl],
+        'simple':    [Karmine, Karmine, make_rl, TitForTat, AdvancedRLAgent],
+        'difficult': [TitForTat, TitForTat, make_rl, TitForTat, AdvancedRLAgent],
+        'very_difficult': [Pretender, Pretender, make_rl, Karmine, AdvancedRLAgent],
+        'karma_aware':    [Karmine, Karmine, make_rl, Stealer, AdvancedRLAgent],
+        'opportunists':   [Opportunist, Opportunist, make_rl, TitForTat, AdvancedRLAgent],
+        'three_karmines': [Karmine, Karmine, make_rl, Karmine, AdvancedRLAgent],
+        'pavlov_vs_tft':  [Pavlov, TitForTat, make_rl, Karmine, AdvancedRLAgent],
+        'threshold_mix':  [lambda: ThresholdAgent(25.0), lambda: ThresholdAgent(50.0), lambda: ThresholdAgent(75.0), make_rl, AdvancedRLAgent],
     }
     if mode not in mapping:
         raise ValueError(f"Modo desconhecido: {mode}")
