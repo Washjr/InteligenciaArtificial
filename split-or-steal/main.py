@@ -15,7 +15,9 @@ from agents.static_agents import (
    Randy,
    Splitter,
    Stealer,
-   TitForTat
+   TitForTat,
+   Pavlov, 
+   ThresholdAgent
 )
 from agents.rl_agent import RLAgent
 from agents.advanced_rl_agent import AdvancedRLAgent
@@ -27,13 +29,15 @@ def create_players(mode, rl_params=None) -> list[Player]:
         return RLAgent(*rl_params) if rl_params else RLAgent()
     
     mapping = {
-        'all':       [Splitter, Stealer, Randy, Karmine, Opportunist, Pretender, TitForTat, make_rl, AdvancedRLAgent],
+        'all':       [Splitter, Stealer, Randy, Karmine, Opportunist, Pretender, TitForTat, Pavlov, ThresholdAgent(), make_rl, AdvancedRLAgent],
         'simple':    [Karmine, Karmine, make_rl, TitForTat],
         'difficult': [TitForTat, TitForTat, make_rl, TitForTat],
         'very_difficult': [Pretender, Pretender, make_rl, Karmine],
         'karma_aware':    [Karmine, Karmine, make_rl, Stealer],
         'opportunists':   [Opportunist, Opportunist, make_rl, TitForTat],
         'three_karmines': [Karmine, Karmine, make_rl, Karmine],
+        'pavlov_vs_tft':  [Pavlov, TitForTat, make_rl, Karmine],
+        'threshold_mix':  [ThresholdAgent(25.0), ThresholdAgent(50.0), ThresholdAgent(75.0), make_rl],
     }
     if mode not in mapping:
         raise ValueError(f"Modo desconhecido: {mode}")
@@ -41,14 +45,18 @@ def create_players(mode, rl_params=None) -> list[Player]:
     return [Player(agent) for agent in raw]
 
 
-def run_single_tournament(render, mode, rl_params=None, save_curve=True):
+def run_single_tournament(render, mode, rl_params=None):
     """
-    Executa um único torneio, salva curva de aprendizado e retorna dict agente->pontuação final.
+    Executa um único torneio e retorna:
+      scores: list of (agent_name, total_score)
+      rl_rewards: list of rewards obtidos pelo RLAgent em cada rodada
     """
-    players = create_players(mode)
+    # Agentes e modo de execução
+    players = create_players(mode, rl_params)
     rl_player = next(p for p in players if isinstance(p.agent, RLAgent))
     rl_rewards = []
 
+    # Cálculo de rounds
     n_rematches = 10
     n_full_rounds = 100
     total_rounds = int(len(players)*(len(players) - 1) * n_full_rounds * n_rematches / 2)
@@ -61,57 +69,34 @@ def run_single_tournament(render, mode, rl_params=None, save_curve=True):
         if name_counts[p.name] > 1:
             p.name = f"{p.name}#{name_counts[p.name]}"
 
+    # Loop principal
     while not game.is_over():
         random.shuffle(players)
         for p in players:
             p.reset_karma()
-        for p1, p2 in combinations(players, 2):           
+
+        for p1, p2 in combinations(players, 2):
+            is_rl_left  = (p1 is rl_player)
+            is_rl_right = (p2 is rl_player)
+
             for rem in range(n_rematches - 1, -1, -1): 
-                game.prepare_round()
-                
-                if render:
-                    print(f"{p1.name} vs {p2.name}")
+                rl_reward = game.run_match(p1, p2, rem, is_rl_left, is_rl_right)
+                if rl_reward is not None:
+                    rl_rewards.append(rl_reward)
 
-                    game.render_start()
-                    game.draw_player_preround(p1, x=50, y=50)
-                    game.draw_player_preround(p2, x=550, y=50)
-                    game.update_display()
-                    game.handle_events()
-                
-                left_r, right_r = game.play_round(p1, p2, rem)
-                if p1 is rl_player:
-                    rl_rewards.append(left_r)
-                elif p2 is rl_player:
-                    rl_rewards.append(right_r)
-
-                if render:
-                    game.render_end()
-                    game.draw_player_postround(p1, x=50, y=50)
-                    game.draw_player_postround(p2, x=550, y=50)
-                    game.update_display()
-
-    # Exporta curva de aprendizado
-    if save_curve:
-        with open('rl_learning_curve.csv', 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['round', 'reward'])
-            for i, r in enumerate(rl_rewards, start=1):
-                writer.writerow([i, r])
-        print("\nCurva de aprendizado salva em rl_learning_curve.csv")
-
-    # Retorna pontuações finais
-    return [(p.name, p.total_amount) for p in players]
+    # Resultados finais
+    scores = [(p.name, p.total_amount) for p in players]
+    return scores, rl_rewards
 
 
 def run_montecarlo(render, mode, runs, rl_params=None):
     """
     Executa vários torneios e apresenta estatísticas agregadas.
     """
-    print("\n")
     all_scores = []
     for i in range(runs):
         print(f"Monte Carlo run {i+1}/{runs}")
-        scores = run_single_tournament(render, mode, rl_params, save_curve=False)
+        scores, _ = run_single_tournament(render, mode, rl_params)
         all_scores.append(scores)
 
     # Agrupa por agente
@@ -121,16 +106,16 @@ def run_montecarlo(render, mode, runs, rl_params=None):
             agg[agent].append(val)
 
     df = pd.DataFrame({
-        'agent': list(agg.keys()),
-        'mean': [np.mean(v) for v in agg.values()],
-        'std':  [np.std(v)  for v in agg.values()],
+        'Agente': list(agg.keys()),
+        'Média': [np.mean(v) for v in agg.values()],
+        'Desvio padrão':  [np.std(v)  for v in agg.values()],
         '25%':  [np.percentile(v, 25) for v in agg.values()],
         '50%':  [np.percentile(v, 50) for v in agg.values()],
         '75%':  [np.percentile(v, 75) for v in agg.values()],
     })
 
     # Exibe tabela alinhada
-    print(df.to_string(index=False, float_format='{:6.1f}'.format))
+    print('\n' + df.to_string(index=False, float_format='{:6.1f}'.format))
 
 
 def main():
@@ -144,7 +129,8 @@ def main():
         '--mode', 
         choices=[
             'all', 'simple', 'difficult', 'very_difficult',
-            'karma_aware', 'opportunists', 'three_karmines'
+            'karma_aware', 'opportunists', 'three_karmines',
+            'pavlov_vs_tft', 'threshold_mix',
         ], 
         default='simple',
         help='Modo de dificuldade do torneio'
@@ -167,7 +153,7 @@ def main():
     if args.montecarlo > 1:
         run_montecarlo(args.render, args.mode, args.montecarlo, rl_params)
     else:
-        scores = run_single_tournament(args.render, args.mode, rl_params)
+        scores, _ = run_single_tournament(args.render, args.mode, rl_params)
 
         # Exibir resultados finais
         print("\nFim do torneio!\n")

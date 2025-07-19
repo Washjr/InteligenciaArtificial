@@ -2,6 +2,9 @@ import pygame
 import numpy as np
 from itertools import combinations
 from collections import defaultdict
+from typing import Optional
+
+from player import Player
 
 MEAN = 100
 VARIANCE = 10000
@@ -100,6 +103,40 @@ class Game:
         # Retorna recompensas para uso externo
         return left_reward, right_reward
 
+
+    def run_match(
+        self,
+        p1: Player,
+        p2: Player,
+        rem: int,
+        is_rl_left: bool = False,
+        is_rl_right: bool = False
+    ) -> Optional[float]:
+        self.prepare_round()
+
+        if self.render:
+            print(f"{p1.name} vs {p2.name}")
+            self.render_start()
+            self.draw_player_preround(p1, 50, 50)
+            self.draw_player_preround(p2, 550, 50)
+            self.update_display()
+            self.handle_events()
+
+        left_r, right_r = self.play_round(p1, p2, rem)
+
+        if self.render:
+            self.render_end()
+            self.draw_player_postround(p1, 50, 50)
+            self.draw_player_postround(p2, 550, 50)
+            self.update_display()
+
+        # devolve apenas a recompensa do RL, ou None
+        if is_rl_left:
+            return left_r
+        if is_rl_right:
+            return right_r
+        return None
+    
 
     # Métodos de renderização
     def _render_common(self) -> None:
