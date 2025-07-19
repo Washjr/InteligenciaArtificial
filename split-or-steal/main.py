@@ -29,7 +29,7 @@ def create_players(mode, rl_params=None) -> list[Player]:
         return RLAgent(*rl_params) if rl_params else RLAgent()
     
     mapping = {
-        'all':       [Splitter, Stealer, Randy, Karmine, Opportunist, Pretender, TitForTat, Pavlov, ThresholdAgent(), make_rl, AdvancedRLAgent],
+        'all':       [Splitter, Stealer, Randy, Karmine, Opportunist, Pretender, TitForTat, Pavlov, ThresholdAgent, make_rl, AdvancedRLAgent],
         'simple':    [Karmine, Karmine, make_rl, TitForTat],
         'difficult': [TitForTat, TitForTat, make_rl, TitForTat],
         'very_difficult': [Pretender, Pretender, make_rl, Karmine],
@@ -37,7 +37,7 @@ def create_players(mode, rl_params=None) -> list[Player]:
         'opportunists':   [Opportunist, Opportunist, make_rl, TitForTat],
         'three_karmines': [Karmine, Karmine, make_rl, Karmine],
         'pavlov_vs_tft':  [Pavlov, TitForTat, make_rl, Karmine],
-        'threshold_mix':  [ThresholdAgent(25.0), ThresholdAgent(50.0), ThresholdAgent(75.0), make_rl],
+        'threshold_mix':  [lambda: ThresholdAgent(25.0), lambda: ThresholdAgent(50.0), lambda: ThresholdAgent(75.0), make_rl],
     }
     if mode not in mapping:
         raise ValueError(f"Modo desconhecido: {mode}")
@@ -50,6 +50,7 @@ def run_single_tournament(render, mode, rl_params=None):
     Executa um único torneio e retorna:
       scores: list of (agent_name, total_score)
       rl_rewards: list of rewards obtidos pelo RLAgent em cada rodada
+      rl_agent: o agente RL treinado durante o torneio
     """
     # Agentes e modo de execução
     players = create_players(mode, rl_params)
@@ -86,7 +87,7 @@ def run_single_tournament(render, mode, rl_params=None):
 
     # Resultados finais
     scores = [(p.name, p.total_amount) for p in players]
-    return scores, rl_rewards
+    return scores, rl_rewards, rl_player.agent
 
 
 def run_montecarlo(render, mode, runs, rl_params=None):
@@ -96,7 +97,7 @@ def run_montecarlo(render, mode, runs, rl_params=None):
     all_scores = []
     for i in range(runs):
         print(f"Monte Carlo run {i+1}/{runs}")
-        scores, _ = run_single_tournament(render, mode, rl_params)
+        scores, _, _ = run_single_tournament(render, mode, rl_params)
         all_scores.append(scores)
 
     # Agrupa por agente
@@ -153,7 +154,7 @@ def main():
     if args.montecarlo > 1:
         run_montecarlo(args.render, args.mode, args.montecarlo, rl_params)
     else:
-        scores, _ = run_single_tournament(args.render, args.mode, rl_params)
+        scores, _, _ = run_single_tournament(args.render, args.mode, rl_params)
 
         # Exibir resultados finais
         print("\nFim do torneio!\n")
