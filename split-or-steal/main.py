@@ -45,7 +45,7 @@ def create_players(mode, rl_params=None) -> list[Player]:
     return [Player(agent) for agent in raw]
 
 
-def run_single_tournament(render, mode, rl_params=None):
+def run_single_tournament(render, mode, rl_params=None, n_full_rounds=100):
     """
     Executa um único torneio e retorna:
       scores: list of (agent_name, total_score)
@@ -59,7 +59,6 @@ def run_single_tournament(render, mode, rl_params=None):
 
     # Cálculo de rounds
     n_rematches = 10
-    n_full_rounds = 100
     total_rounds = int(len(players)*(len(players) - 1) * n_full_rounds * n_rematches / 2)
     game = Game(total_rounds, render=render)
 
@@ -97,7 +96,7 @@ def run_montecarlo(render, mode, runs, rl_params=None):
     all_scores = []
     for i in range(runs):
         print(f"Monte Carlo run {i+1}/{runs}")
-        scores, _, _ = run_single_tournament(render, mode, rl_params)
+        scores, _, _ = run_single_tournament(render=render, mode=mode, rl_params=rl_params)
         all_scores.append(scores)
 
     # Agrupa por agente
@@ -154,7 +153,7 @@ def main():
     if args.montecarlo > 1:
         run_montecarlo(args.render, args.mode, args.montecarlo, rl_params)
     else:
-        scores, _, _ = run_single_tournament(args.render, args.mode, rl_params)
+        scores, _, _ = run_single_tournament(render=args.render, mode=args.mode, rl_params=rl_params)
 
         # Exibir resultados finais
         print("\nFim do torneio!\n")
