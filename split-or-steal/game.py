@@ -65,8 +65,9 @@ class Game:
         right_decision = right_player.decision(self.current_amount, remaining_rounds, right_player.karma, left_player.karma)
         assert left_decision in ("split", "steal") and right_decision in ("split", "steal")
 
-        print(f"Player {left_player.name}={left_decision}"
-              f" vs Player {right_player.name}={right_decision}")
+        if self.render:
+            print(f"Player {left_player.name}={left_decision}"
+                f" vs Player {right_player.name}={right_decision}")
 
         # Cálculo das recompensas
         if left_decision == right_decision == "steal":
@@ -82,8 +83,9 @@ class Game:
             left_reward = 0
             right_reward = self.current_amount 
 
-        print(f"Player {left_player.name} ganhou {left_reward:.2f}"
-              f" vs Player {right_player.name} ganhou {right_reward:.2f}")
+        if self.render:
+            print(f"Player {left_player.name} ganhou {left_reward:.2f}"
+                f" vs Player {right_player.name} ganhou {right_reward:.2f}")
 
         # Atualiza estados e karma
         left_player.total_amount += left_reward
