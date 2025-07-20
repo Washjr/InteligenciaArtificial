@@ -1,87 +1,105 @@
 from collections import defaultdict
 import random
+import numpy as np
 
 class AdvancedRLAgent:
-    def __init__(self):
-        self.q_table = defaultdict(lambda: defaultdict(float))
-        self.alpha = 0.1
-        self.gamma = 0.95
-        self.epsilon = 0.1
-        self.opponent_history = []  # Simplificado para uma lista
-        self.last_state = None
-        self.last_action = None
+    def __init__(self, alpha: float = 0.1, gamma: float = 0.95, epsilon: float = 0.1):
+        # Hyperparâmetros
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        
+        # Q-table usando a mesma estrutura do RLAgent
+        self.Q = defaultdict(lambda: [0.0, 0.0])
+        self.action_list = ["split", "steal"]
+        
+        # Variáveis de estado como no RLAgent
+        self.current_input = None
+        self.current_output = None
         self.last_round = False
+        
+        # Histórico do oponente para análise de padrões
+        self.opponent_history = []
         self.game_count = 0
 
     def reset(self):
-        self.last_state = None
-        self.last_action = None
+        self.current_input = None
+        self.current_output = None
         self.opponent_history.clear()
 
     def _get_opponent_pattern(self):
         if len(self.opponent_history) < 3:
-            return 'unknown'
+            return 0  # unknown
             
         recent_actions = self.opponent_history[-5:]
         split_rate = sum(1 for action in recent_actions if action == 'split') / len(recent_actions)
         
         if split_rate > 0.7:
-            return 'cooperative'
+            return 1  # cooperative
         elif split_rate < 0.3:
-            return 'aggressive'
+            return -1  # aggressive
         else:
-            return 'mixed'
+            return 0  # mixed
 
-    def get_state(self, your_karma, his_karma, round_context, amount):
-        # Estado baseado nos parâmetros disponíveis
-        opp_pattern = self._get_opponent_pattern()
-        your_karma_level = 'high' if your_karma > 0.5 else 'low' if your_karma < -0.5 else 'neutral'
-        his_karma_level = 'high' if his_karma > 0.5 else 'low' if his_karma < -0.5 else 'neutral'
-        amount_level = 'high' if amount > 150 else 'low' if amount < 50 else 'medium'
+    def extract_rl_state(self, state):
+        """Extrai um estado simplificado para o Q-learning"""
+        amount, rounds_left, your_karma, his_karma, last_round = state
+
+        # Usa as 5 posições do karma (de -2 a +2)
+        your_karma_pos = max(-2, min(2, your_karma))  # Clamp entre -2 e +2
+        his_karma_sign = np.sign(his_karma)                 # -1, 0, 1
+        opp_pattern = self._get_opponent_pattern()  # -1, 0, 1
+        amount_level = 1 if amount > 150 else -1 if amount < 50 else 0
+        round_context = 1 if last_round else 0
         
-        return (your_karma_level, his_karma_level, opp_pattern, round_context, amount_level)
-    
+        return (your_karma_pos, his_karma_sign, opp_pattern, amount_level, round_context)
+
     def choose_action(self, state):
+        state = self.extract_rl_state(state)
+        
         # Epsilon-greedy com decay
-        if random.random() < self.epsilon:
-            action = random.choice(['split', 'steal'])
+        if np.random.uniform(0, 1) < self.epsilon:
+            action = np.random.choice(["split", "steal"])
         else:
-            split_value = self.q_table[state]['split']
-            steal_value = self.q_table[state]['steal']
-            action = 'split' if split_value > steal_value else 'steal'
+            action = self.action_list[np.argmax(self.Q[state])]
         
         return action
-    
+
+    def update_qtable(self, state, action, reward, next_state):
+        """Atualização Q-learning usando a mesma fórmula do RLAgent"""
+        alp = self.alpha
+        gam = self.gamma
+        action_index = self.action_list.index(action)
+        state = self.extract_rl_state(state)
+        next_state = self.extract_rl_state(next_state)
+        self.Q[state][action_index] = (1 - alp) * self.Q[state][action_index] + alp * (reward + gam * np.max(self.Q[next_state]))
+
     def get_name(self):
         return "AdvancedRL"
 
     def decision(self, amount, rounds_left, your_karma, his_karma):
-        # Define o contexto da rodada
-        self.last_round = rounds_left == 0
-        round_context = 'final' if self.last_round else 'normal'
+        self.last_round = True if rounds_left == 0 else False
         
-        # Cria um identificador do estado baseado nos parâmetros disponíveis
-        state = self.get_state(your_karma, his_karma, round_context, amount)
-        action = self.choose_action(state)
+        novel_input = (amount, rounds_left, your_karma, his_karma, self.last_round)
+
+        if self.current_input is not None:
+            self.update_qtable(self.current_input, self.current_output[0], self.current_output[-1], novel_input)
+            
+        self.current_input = novel_input
         
-        self.last_state = state
-        self.last_action = action
-        return action
+        return self.choose_action(self.current_input)
 
     def result(self, your_action, his_action, total_possible, reward):
         """Método chamado após cada rodada para atualizar o agente"""
-        # Calcula recompensa customizada baseada nas ações
-        custom_reward = self._calculate_reward(your_action, his_action, reward, total_possible)
-        
-        # Q-Learning update
-        if self.last_state and self.last_action:
-            current_q = self.q_table[self.last_state][self.last_action]
-            self.q_table[self.last_state][self.last_action] = current_q + self.alpha * (custom_reward - current_q)
-        
         # Atualiza histórico do oponente
         self.opponent_history.append(his_action)
         if len(self.opponent_history) > 10:
             self.opponent_history.pop(0)
+        
+        # Calcula recompensa customizada
+        custom_reward = self._calculate_reward(your_action, his_action, reward, total_possible)
+        
+        self.current_output = (your_action, his_action, total_possible, custom_reward)
         
         # Decay epsilon após cada jogo
         if self.last_round:
@@ -90,17 +108,18 @@ class AdvancedRLAgent:
             
     def _calculate_reward(self, your_action, his_action, actual_reward, total_possible):
         """Calcula recompensa customizada para melhorar aprendizado"""
-        # Recompensa base é o reward real normalizado
-        base_reward = actual_reward / max(total_possible, 1) if total_possible > 0 else 0
-        
-        # Bonificações por cooperação mútua
-        if your_action == "split" and his_action == "split":
-            return base_reward + 0.5  # Cooperação mútua é boa
+        # Recompensa base similar ao RLAgent mas com bonificações
+        if your_action == "steal" and his_action == "steal": 
+            base_reward = 0
         elif your_action == "steal" and his_action == "split":
-            return base_reward + 0.3  # Exploração bem-sucedida
+            base_reward = 2
+        elif your_action == "split" and his_action == "split":
+            base_reward = 1
         elif your_action == "split" and his_action == "steal":
-            return base_reward - 0.3  # Penalidade por ser explorado
-        else:  # steal vs steal
-            return base_reward - 0.1  # Ambos perderam
-            
+            base_reward = -1
+        
+        # Adiciona pequenos ajustes baseados no contexto
+        if your_action == "split" and his_action == "split":
+            base_reward += 0.1  # Pequeno bônus por cooperação mútua
+        
         return base_reward
