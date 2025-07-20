@@ -3,12 +3,13 @@ from collections import defaultdict
 import numpy as np
 
 class RLAgent:
-    def __init__(self, alpha: float = 0.5, gamma: float = 0.9, epsilon: float = 0.1):
+    def __init__(self, alpha: float = 0.5, gamma: float = 0.9, epsilon: float = 0.1, name: str = ""):
     
         # Hyperparâmetros
         self.alpha = alpha        # Learning rate
         self.gamma = gamma        # Discount factor
         self.epsilon = epsilon    # Exploration rate
+        self.name = name
 
         # Lembrando a ultima acao
         self.last_opponent_action = None
@@ -50,7 +51,7 @@ class RLAgent:
       
 
     def get_name(self):
-        return "SimpleRL"
+        return "SimpleRL " + self.name
 
 
     def decision(self, amount, rounds_left, your_karma, his_karma):

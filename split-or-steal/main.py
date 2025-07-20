@@ -29,8 +29,8 @@ def create_players(mode, rl_params=None) -> list[Player]:
         return RLAgent(*rl_params) if rl_params else RLAgent()
     
     mapping = {
-        'all':       [Splitter, Stealer, Randy, Karmine, Opportunist, Pretender, TitForTat, Pavlov, ThresholdAgent, make_rl, AdvancedRLAgent],
-        'simple':    [Karmine, Karmine, make_rl, TitForTat, AdvancedRLAgent],
+        'all':       [Splitter, Stealer, Randy, Karmine, Opportunist, Pretender, TitForTat, Pavlov, ThresholdAgent, make_rl, AdvancedRLAgent, lambda: RLAgent(0.60, 0.96, 0.10, "FineTuned")],
+        'simple':    [Karmine, Karmine, make_rl, TitForTat, AdvancedRLAgent, lambda: RLAgent(0.7, 0.99, 0.10, "FineTuned")],
         'difficult': [TitForTat, TitForTat, make_rl, TitForTat, AdvancedRLAgent],
         'very_difficult': [Pretender, Pretender, make_rl, Karmine, AdvancedRLAgent],
         'karma_aware':    [Karmine, Karmine, make_rl, Stealer, AdvancedRLAgent],
