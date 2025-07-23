@@ -117,9 +117,5 @@ class AdvancedRLAgent:
             base_reward = 1
         elif your_action == "split" and his_action == "steal":
             base_reward = -1
-        
-        # Adiciona pequenos ajustes baseados no contexto
-        if your_action == "split" and his_action == "split":
-            base_reward += 0.1  # Pequeno bônus por cooperação mútua
-        
+                
         return base_reward

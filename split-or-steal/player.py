@@ -5,7 +5,6 @@ class Player:
         self.total_amount = 0
         self.karma = 0
         self.last_decision = None
-        # self.last_decision = "none"
 
     def reset_karma(self) -> None:
         self.karma = 0

@@ -48,8 +48,8 @@ def create_players(mode, rl_params=None) -> list[Player]:
 def run_single_tournament(render, mode, rl_params=None, n_full_rounds=100):
     """
     Executa um único torneio e retorna:
-      scores: list of (agent_name, total_score)
-      rl_rewards: list of rewards obtidos pelo RLAgent em cada rodada
+      scores: lista de (agent_name, total_score)
+      rl_rewards: lista de rewards obtidos pelo RLAgent em cada rodada
       rl_agent: o agente RL treinado durante o torneio
     """
     # Agentes e modo de execução
